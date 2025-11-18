@@ -3,14 +3,14 @@ Kiel City Data Platform - FastAPI Application
 
 This FastAPI application demonstrates:
 1. RESTful API design with proper HTTP methods (GET, POST, PUT, DELETE)
-2. Integration with multiple databases (PostgreSQL, MongoDB, Redis)
+2. Integration with multiple databases (MariaDB, MongoDB, Redis)
 3. Automatic API documentation (Swagger/OpenAPI)
 4. Request/response validation with Pydantic
 5. Error handling and status codes
 6. Caching strategies for performance
 
 Endpoints:
-- City Data (PostgreSQL): /api/city/*
+- City Data (MariaDB): /api/city/*
 - Bike Sharing (MongoDB): /api/bikes/*
 - System Health: /health
 - Statistics: /api/stats
@@ -28,7 +28,7 @@ from models import (
     BikeStation, BikeStationCreate, BikeStationHistory,
     HealthCheck, Stats, ErrorResponse
 )
-from database import postgres_db, mongo_db, redis_cache
+from database import mariadb_db, mongo_db, redis_cache
 
 # Initialize FastAPI app with metadata for Swagger documentation
 app = FastAPI(
@@ -41,7 +41,7 @@ app = FastAPI(
     
     ## Features
     
-    - **PostgreSQL Integration**: Structured city data (Points of Interest)
+    - **MariaDB Integration**: Structured city data (Points of Interest)
     - **MongoDB Integration**: Time-series bike sharing data
     - **Redis Caching**: Performance optimization for frequently accessed data
     - **Full CRUD Operations**: Create, Read, Update, Delete for all resources
@@ -49,7 +49,7 @@ app = FastAPI(
     
     ## Database SDKs Used
     
-    - **psycopg2**: PostgreSQL driver for Python
+    - **psycopg2**: MariaDB driver for Python
     - **pymongo**: MongoDB driver for Python
     - **redis-py**: Redis client for Python
     
@@ -86,7 +86,7 @@ app.add_middleware(
     response_model=HealthCheck,
     tags=["System"],
     summary="Check system health",
-    description="Returns the health status of all connected services (PostgreSQL, MongoDB, Redis)"
+    description="Returns the health status of all connected services (MariaDB, MongoDB, Redis)"
 )
 async def health_check():
     """
@@ -95,16 +95,16 @@ async def health_check():
     Returns:
         HealthCheck: Status of all database connections
     """
-    postgres_healthy = False
+    mariadb_healthy = False
     mongodb_healthy = False
     redis_healthy = False
     
-    # Check PostgreSQL
+    # Check MariaDB
     try:
-        postgres_db.execute_query("SELECT 1", fetch=True)
-        postgres_healthy = True
+        mariadb_db.execute_query("SELECT 1", fetch=True)
+        mariadb_healthy = True
     except Exception as e:
-        print(f"PostgreSQL health check failed: {e}")
+        print(f"MariaDB health check failed: {e}")
     
     # Check MongoDB
     try:
@@ -120,11 +120,11 @@ async def health_check():
     except Exception as e:
         print(f"Redis health check failed: {e}")
     
-    overall_status = "healthy" if all([postgres_healthy, mongodb_healthy, redis_healthy]) else "degraded"
+    overall_status = "healthy" if all([mariadb_healthy, mongodb_healthy, redis_healthy]) else "degraded"
     
     return HealthCheck(
         status=overall_status,
-        postgres=postgres_healthy,
+        postgres=mariadb_healthy,
         mongodb=mongodb_healthy,
         redis=redis_healthy,
         timestamp=datetime.now()
@@ -145,10 +145,10 @@ async def get_stats():
     Returns:
         Stats: Aggregated statistics from all databases
     """
-    # Count POIs in PostgreSQL
+    # Count POIs in MariaDB
     total_pois = 0
     try:
-        result = postgres_db.execute_query("SELECT COUNT(*) as count FROM points_of_interest")
+        result = mariadb_db.execute_query("SELECT COUNT(*) as count FROM points_of_interest")
         total_pois = result[0]['count'] if result else 0
     except Exception as e:
         print(f"Error counting POIs: {e}")
@@ -175,7 +175,7 @@ async def get_stats():
 
 
 # ============================================================================
-# City Data Endpoints (PostgreSQL)
+# City Data Endpoints (MariaDB)
 # ============================================================================
 
 @app.get(
@@ -183,7 +183,7 @@ async def get_stats():
     response_model=List[POI],
     tags=["City Data"],
     summary="List all Points of Interest",
-    description="Retrieve all POIs from PostgreSQL database. Results are cached in Redis for 5 minutes."
+    description="Retrieve all POIs from MariaDB database. Results are cached in Redis for 5 minutes."
 )
 async def list_pois(
     poi_type: Optional[str] = Query(None, description="Filter by POI type"),
@@ -210,14 +210,14 @@ async def list_pois(
     if cached:
         return cached
     
-    # Query PostgreSQL
+    # Query MariaDB
     try:
         if poi_type:
-            query = "SELECT * FROM points_of_interest WHERE type = %s LIMIT %s"
-            results = postgres_db.execute_query(query, (poi_type, limit))
+            query = "SELECT * FROM points_of_interest WHERE type = ? LIMIT ?"
+            results = mariadb_db.execute_query(query, (poi_type, limit))
         else:
-            query = "SELECT * FROM points_of_interest LIMIT %s"
-            results = postgres_db.execute_query(query, (limit,))
+            query = "SELECT * FROM points_of_interest LIMIT ?"
+            results = mariadb_db.execute_query(query, (limit,))
         
         pois = [POI(**row) for row in results]
         
@@ -253,8 +253,8 @@ async def get_poi(poi_id: int):
         HTTPException: 404 if POI not found
     """
     try:
-        query = "SELECT * FROM points_of_interest WHERE id = %s"
-        results = postgres_db.execute_query(query, (poi_id,))
+        query = "SELECT * FROM points_of_interest WHERE id = ?"
+        results = mariadb_db.execute_query(query, (poi_id,))
         
         if not results:
             raise HTTPException(
@@ -278,7 +278,7 @@ async def get_poi(poi_id: int):
     status_code=status.HTTP_201_CREATED,
     tags=["City Data"],
     summary="Create a new POI",
-    description="Create a new Point of Interest in PostgreSQL database"
+    description="Create a new Point of Interest in MariaDB database"
 )
 async def create_poi(poi: POICreate):
     """
@@ -299,10 +299,10 @@ async def create_poi(poi: POICreate):
     try:
         query = """
             INSERT INTO points_of_interest (name, type, latitude, longitude, description)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?)
             RETURNING id, name, type, latitude, longitude, description
         """
-        result = postgres_db.execute_query(
+        result = mariadb_db.execute_query(
             query,
             (poi.name, poi.type, poi.latitude, poi.longitude, poi.description)
         )
@@ -345,8 +345,8 @@ async def search_pois(
         List[POI]: Matching points of interest
     """
     try:
-        query = f"SELECT * FROM points_of_interest WHERE {search_field} ILIKE %s LIMIT 50"
-        results = postgres_db.execute_query(query, (f"%{q}%",))
+        query = f"SELECT * FROM points_of_interest WHERE {search_field} ILIKE ? LIMIT 50"
+        results = mariadb_db.execute_query(query, (f"%{q}%",))
         return [POI(**row) for row in results]
     except Exception as e:
         raise HTTPException(
@@ -564,12 +564,12 @@ async def root():
     return {
         "name": "Kiel City Data Platform API",
         "version": "1.0.0",
-        "description": "Cloud computing orchestration example with PostgreSQL, MongoDB, and Redis",
+        "description": "Cloud computing orchestration example with MariaDB, MongoDB, and Redis",
         "documentation": "/docs",
         "health_check": "/health",
         "stats": "/api/stats",
         "learning_focus": [
-            "PostgreSQL SDK (psycopg2)",
+            "MariaDB SDK (psycopg2)",
             "MongoDB SDK (pymongo)",
             "Redis caching",
             "FastAPI framework",
@@ -591,5 +591,5 @@ async def startup_event():
 async def shutdown_event():
     """Clean up resources on shutdown."""
     print("👋 Shutting down API...")
-    postgres_db.close()
+    mariadb_db.close()
     mongo_db.close()

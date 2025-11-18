@@ -2,12 +2,12 @@
 Database connection management and SDK examples.
 
 This module demonstrates proper usage of:
-- psycopg2 for PostgreSQL (SQL database SDK)
+- mariadb for MariaDB (SQL database SDK)
 - pymongo for MongoDB (NoSQL database SDK)
 - redis for caching
 
 Key learning points:
-1. Connection pooling for PostgreSQL
+1. Connection pooling for MariaDB
 2. Context managers for safe connection handling
 3. Error handling and retries
 4. Cursor management in SQL
@@ -16,8 +16,7 @@ Key learning points:
 
 import os
 import time
-import psycopg2
-from psycopg2 import pool, extras
+import mariadb
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import redis
@@ -30,143 +29,172 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class PostgreSQLDatabase:
+class MariaDBDatabase:
     """
-    PostgreSQL database connection manager using psycopg2.
-    
+    MariaDB database connection manager using the mariadb connector.
+
     This class demonstrates:
     - Connection pooling for efficient resource usage
     - Proper connection lifecycle management
     - SQL query execution with parameterized queries (防止 SQL injection)
     - Transaction handling
+    - Dict-based result rows for easier data access
+
+    The mariadb connector is the official MariaDB driver for Python.
+    It's written in C, providing excellent performance, and is specifically
+    optimized for MariaDB (not MySQL). This is the recommended SDK for
+    students working with MariaDB databases.
     """
-    
+
     def __init__(self):
-        """Initialize PostgreSQL connection pool."""
-        self.pool: Optional[pool.SimpleConnectionPool] = None
+        """Initialize MariaDB connection pool."""
+        self.pool: Optional[mariadb.ConnectionPool] = None
         self._initialize_pool()
-    
+
     def _initialize_pool(self, retries=5):
         """
         Initialize connection pool with retry logic.
-        
+
         Args:
             retries: Number of connection attempts before failing
         """
         for attempt in range(retries):
             try:
-                self.pool = psycopg2.pool.SimpleConnectionPool(
-                    minconn=1,
-                    maxconn=10,
-                    host=os.getenv('POSTGRES_HOST', 'postgres'),
-                    port=os.getenv('POSTGRES_PORT', '5432'),
-                    database=os.getenv('POSTGRES_DB', 'kiel_data'),
-                    user=os.getenv('POSTGRES_USER', 'kiel_user'),
-                    password=os.getenv('POSTGRES_PASSWORD', 'kiel_secure_password_2024')
+                # Create connection pool
+                self.pool = mariadb.ConnectionPool(
+                    pool_name="kiel_pool",
+                    pool_size=10,
+                    host=os.getenv('MARIADB_HOST', 'mariadb'),
+                    port=int(os.getenv('MARIADB_PORT', '3306')),
+                    database=os.getenv('MARIADB_DB', 'kiel_data'),
+                    user=os.getenv('MARIADB_USER', 'kiel_user'),
+                    password=os.getenv('MARIADB_PASSWORD', 'kiel_secure_password_2024')
                 )
-                logger.info("PostgreSQL connection pool created successfully")
+
+                # Test connection
+                conn = self.pool.get_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.close()
+                conn.close()
+
+                logger.info("MariaDB connection pool created successfully")
                 return
-            except psycopg2.OperationalError as e:
-                logger.warning(f"PostgreSQL connection attempt {attempt + 1} failed: {e}")
+            except mariadb.Error as e:
+                logger.warning(f"MariaDB connection attempt {attempt + 1} failed: {e}")
                 if attempt < retries - 1:
                     time.sleep(2 ** attempt)  # Exponential backoff
                 else:
-                    logger.error("Failed to connect to PostgreSQL after all retries")
+                    logger.error("Failed to connect to MariaDB after all retries")
                     raise
-    
+
     def get_connection(self):
         """
         Get a connection from the pool.
-        
+
         Returns:
-            psycopg2 connection object
-        
+            mariadb connection object
+
         Example usage:
             conn = db.get_connection()
             try:
                 # Use connection
             finally:
-                db.return_connection(conn)
+                conn.close()
         """
         if self.pool is None:
             self._initialize_pool()
-        return self.pool.getconn()
-    
-    def return_connection(self, conn):
-        """Return a connection to the pool."""
-        if self.pool and conn:
-            self.pool.putconn(conn)
-    
-    def execute_query(self, query: str, params: tuple = None, fetch: bool = True) -> Optional[List]:
+        return self.pool.get_connection()
+
+    def execute_query(self, query: str, params: tuple = None, fetch: bool = True) -> Optional[List[Dict]]:
         """
         Execute a SQL query with proper connection management.
-        
+
+        This demonstrates:
+        - Parameterized queries with ? placeholders (防止 SQL injection)
+        - Named dictionary cursor for easy column access
+        - Proper transaction handling
+        - Automatic resource cleanup
+
         Args:
-            query: SQL query string (use %s for parameters)
+            query: SQL query string (use ? for parameters)
             params: Query parameters (prevents SQL injection)
             fetch: Whether to fetch and return results
-        
+
         Returns:
-            Query results as list of tuples, or None
-        
+            Query results as list of dicts, or None
+
         Example:
             results = db.execute_query(
-                "SELECT * FROM points_of_interest WHERE type = %s",
+                "SELECT * FROM points_of_interest WHERE type = ?",
                 ('museum',)
             )
         """
         conn = None
         try:
             conn = self.get_connection()
-            with conn.cursor(cursor_factory=extras.RealDictCursor) as cursor:
-                cursor.execute(query, params)
-                if fetch:
-                    return cursor.fetchall()
+            cursor = conn.cursor(dictionary=True)  # Return rows as dictionaries
+
+            cursor.execute(query, params or ())
+
+            if fetch:
+                results = cursor.fetchall()
+                cursor.close()
+                return results
+            else:
                 conn.commit()
+                cursor.close()
                 return None
-        except Exception as e:
+
+        except mariadb.Error as e:
             if conn:
                 conn.rollback()
             logger.error(f"Database query error: {e}")
             raise
         finally:
-            if conn:
-                self.return_connection(conn)
-    
+            if conn and conn.is_connected():
+                conn.close()
+
     def execute_many(self, query: str, params_list: List[tuple]) -> None:
         """
         Execute a query multiple times with different parameters (batch insert).
-        
+
+        This demonstrates executemany for efficient batch operations.
+        Particularly useful for bulk inserts.
+
         Args:
             query: SQL query string
             params_list: List of parameter tuples
-        
+
         Example:
             db.execute_many(
-                "INSERT INTO points_of_interest (name, type, lat, lon) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO points_of_interest (name, type, latitude, longitude) VALUES (?, ?, ?, ?)",
                 [('Museum', 'culture', 54.32, 10.13), ('Park', 'nature', 54.31, 10.12)]
             )
         """
         conn = None
         try:
             conn = self.get_connection()
-            with conn.cursor() as cursor:
-                cursor.executemany(query, params_list)
-                conn.commit()
-        except Exception as e:
+            cursor = conn.cursor()
+
+            cursor.executemany(query, params_list)
+            conn.commit()
+            cursor.close()
+
+        except mariadb.Error as e:
             if conn:
                 conn.rollback()
             logger.error(f"Batch execution error: {e}")
             raise
         finally:
-            if conn:
-                self.return_connection(conn)
-    
+            if conn and conn.is_connected():
+                conn.close()
+
     def close(self):
         """Close all connections in the pool."""
         if self.pool:
-            self.pool.closeall()
-            logger.info("PostgreSQL connection pool closed")
+            self.pool.close()
+            logger.info("MariaDB connection pool closed")
 
 
 class MongoDatabase:
@@ -458,6 +486,6 @@ class RedisCache:
 
 
 # Global database instances
-postgres_db = PostgreSQLDatabase()
+mariadb_db = MariaDBDatabase()
 mongo_db = MongoDatabase()
 redis_cache = RedisCache()

@@ -1,8 +1,8 @@
 """
-PostgreSQL Data Loader for Kiel City Points of Interest
+MariaDB Data Loader for Kiel City Points of Interest
 
 This script demonstrates:
-1. Database connection with psycopg2
+1. Database connection with mariadb connector
 2. Table creation with SQL DDL
 3. Batch data insertion
 4. Error handling and retries
@@ -13,42 +13,41 @@ The script populates the database with real Kiel landmarks and POIs.
 
 import os
 import time
-import psycopg2
-from psycopg2 import sql
+import mariadb
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def wait_for_postgres(max_retries=30):
+def wait_for_mariadb(max_retries=30):
     """
-    Wait for PostgreSQL to be ready.
+    Wait for MariaDB to be ready.
     
     Args:
         max_retries: Maximum number of connection attempts
     
     Returns:
-        psycopg2 connection object
+        mariadb connection object
     """
-    logger.info("Waiting for PostgreSQL to be ready...")
+    logger.info("Waiting for MariaDB to be ready...")
     
     for attempt in range(max_retries):
         try:
-            conn = psycopg2.connect(
-                host=os.getenv('POSTGRES_HOST', 'postgres'),
-                port=os.getenv('POSTGRES_PORT', '5432'),
-                database=os.getenv('POSTGRES_DB', 'kiel_data'),
-                user=os.getenv('POSTGRES_USER', 'kiel_user'),
-                password=os.getenv('POSTGRES_PASSWORD', 'kiel_secure_password_2024')
+            conn = mariadb.connect(
+                host=os.getenv('MARIADB_HOST', 'mariadb'),
+                port=int(os.getenv('MARIADB_PORT', '3306')),
+                database=os.getenv('MARIADB_DB', 'kiel_data'),
+                user=os.getenv('MARIADB_USER', 'kiel_user'),
+                password=os.getenv('MARIADB_PASSWORD', 'kiel_secure_password_2024')
             )
-            logger.info("✓ PostgreSQL is ready!")
+            logger.info("✓ MariaDB is ready!")
             return conn
-        except psycopg2.OperationalError as e:
-            logger.warning(f"Attempt {attempt + 1}/{max_retries}: PostgreSQL not ready yet...")
+        except mariadb.Error as e:
+            logger.warning(f"Attempt {attempt + 1}/{max_retries}: MariaDB not ready yet... ({e})")
             time.sleep(2)
     
-    raise Exception("PostgreSQL did not become ready in time")
+    raise Exception("MariaDB did not become ready in time")
 
 
 def create_table(conn):
@@ -61,35 +60,38 @@ def create_table(conn):
     - Primary key and indexes
     
     Args:
-        conn: psycopg2 connection object
+        conn: mariadb connection object
     """
     logger.info("Creating points_of_interest table...")
     
-    with conn.cursor() as cursor:
-        # Drop table if exists (for clean restart)
-        cursor.execute("DROP TABLE IF EXISTS points_of_interest")
-        
-        # Create table with appropriate columns
-        cursor.execute("""
-            CREATE TABLE points_of_interest (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(200) NOT NULL,
-                type VARCHAR(50) NOT NULL,
-                latitude DOUBLE PRECISION NOT NULL,
-                longitude DOUBLE PRECISION NOT NULL,
-                description TEXT
-            )
-        """)
-        
-        # Create indexes for better query performance
-        cursor.execute("""
-            CREATE INDEX idx_poi_type ON points_of_interest(type)
-        """)
-        cursor.execute("""
-            CREATE INDEX idx_poi_name ON points_of_interest(name)
-        """)
-        
-        conn.commit()
+    cursor = conn.cursor()
+    
+    # Drop table if exists (for clean restart)
+    cursor.execute("DROP TABLE IF EXISTS points_of_interest")
+    
+    # Create table with appropriate columns
+    # Note: MariaDB uses AUTO_INCREMENT instead of SERIAL
+    cursor.execute("""
+        CREATE TABLE points_of_interest (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            latitude DOUBLE NOT NULL,
+            longitude DOUBLE NOT NULL,
+            description TEXT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    
+    # Create indexes for better query performance
+    cursor.execute("""
+        CREATE INDEX idx_poi_type ON points_of_interest(type)
+    """)
+    cursor.execute("""
+        CREATE INDEX idx_poi_name ON points_of_interest(name)
+    """)
+    
+    conn.commit()
+    cursor.close()
     
     logger.info("✓ Table created successfully")
 
@@ -106,7 +108,7 @@ def insert_kiel_pois(conn):
     Data includes actual Kiel landmarks, museums, parks, and infrastructure.
     
     Args:
-        conn: psycopg2 connection object
+        conn: mariadb connection object
     """
     logger.info("Inserting Kiel Points of Interest...")
     
@@ -161,15 +163,18 @@ def insert_kiel_pois(conn):
         ('Kiel-Holtenau Locks', 'historic', 54.3736, 10.1453, 'Locks connecting to Kiel Canal'),
     ]
     
-    with conn.cursor() as cursor:
-        cursor.executemany(
-            """
-            INSERT INTO points_of_interest (name, type, latitude, longitude, description)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            kiel_pois
-        )
-        conn.commit()
+    cursor = conn.cursor()
+    
+    # Note: MariaDB connector uses ? placeholders
+    cursor.executemany(
+        """
+        INSERT INTO points_of_interest (name, type, latitude, longitude, description)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        kiel_pois
+    )
+    conn.commit()
+    cursor.close()
     
     logger.info(f"✓ Inserted {len(kiel_pois)} Points of Interest")
 
@@ -179,29 +184,32 @@ def verify_data(conn):
     Verify that data was inserted correctly.
     
     Args:
-        conn: psycopg2 connection object
+        conn: mariadb connection object
     """
     logger.info("Verifying data insertion...")
     
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM points_of_interest")
-        count = cursor.fetchone()[0]
-        logger.info(f"✓ Total POIs in database: {count}")
-        
-        cursor.execute("SELECT DISTINCT type FROM points_of_interest ORDER BY type")
-        types = cursor.fetchall()
-        logger.info(f"✓ POI types: {', '.join([t[0] for t in types])}")
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM points_of_interest")
+    count = cursor.fetchone()[0]
+    logger.info(f"✓ Total POIs in database: {count}")
+    
+    cursor.execute("SELECT DISTINCT type FROM points_of_interest ORDER BY type")
+    types = cursor.fetchall()
+    logger.info(f"✓ POI types: {', '.join([t[0] for t in types])}")
+    
+    cursor.close()
 
 
 def main():
     """Main execution function."""
     logger.info("=" * 60)
-    logger.info("Kiel City Data Loader - PostgreSQL Initialization")
+    logger.info("Kiel City Data Loader - MariaDB Initialization")
     logger.info("=" * 60)
     
     try:
-        # Connect to PostgreSQL
-        conn = wait_for_postgres()
+        # Connect to MariaDB
+        conn = wait_for_mariadb()
         
         # Create database schema
         create_table(conn)
