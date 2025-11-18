@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Stores structured city data
+  postgres:
+    image: postgres:15-alpine
+    container_name: kiel-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kiel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MongoDB Database - Stores time-series bike sharing data
+  mongodb:
+    image: mongo:7
+    container_name: kiel-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - kiel-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache - Improves API performance
+  redis:
+    image: redis:7-alpine
+    container_name: kiel-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - kiel-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Data Loader - Initializes PostgreSQL with Kiel city data
+  data-loader:
+    build:
+      context: ./data-loader
+      dockerfile: Dockerfile
+    container_name: kiel-data-loader
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - kiel-network
+    restart: "no"  # Run once
+
+  # Cron Job - Fetches bike data every 5 minutes
+  cron-job:
+    build:
+      context: ./cron-job
+      dockerfile: Dockerfile
+    container_name: kiel-cron-job
+    environment:
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DB: ${MONGO_DB}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      DONKEY_API_URL: ${DONKEY_API_URL}
+      DONKEY_API_HEADER: ${DONKEY_API_HEADER}
+      KIEL_BBOX_TOP_RIGHT: ${KIEL_BBOX_TOP_RIGHT}
+      KIEL_BBOX_BOTTOM_LEFT: ${KIEL_BBOX_BOTTOM_LEFT}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - kiel-network
+    restart: unless-stopped
+
+  # FastAPI Backend - Main API service
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: kiel-api
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DB: ${MONGO_DB}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      API_HOST: ${API_HOST}
+      API_PORT: ${API_PORT}
+      API_TITLE: ${API_TITLE}
+      API_VERSION: ${API_VERSION}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      data-loader:
+        condition: service_completed_successfully
+    networks:
+      - kiel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Streamlit Dashboard - Interactive visualization
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: kiel-dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - kiel-network
+    restart: unless-stopped
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    name: kiel_postgres_data
+  mongodb_data:
+    name: kiel_mongodb_data
+  redis_data:
+    name: kiel_redis_data
+
+# Internal network for service communication
+networks:
+  kiel-network:
+    name: kiel-network
+    driver: bridge

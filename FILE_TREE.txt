@@ -1,0 +1,53 @@
+cloud_computing_orchestrated_example/
+│
+├── Documentation (7 files)
+│   ├── README.md                 # Main documentation - START HERE
+│   ├── ARCHITECTURE.md           # System architecture and design
+│   ├── TESTING.md                # Testing procedures
+│   ├── PRESENTATION_GUIDE.md     # How to present the project
+│   ├── QUICK_REFERENCE.md        # Command reference card
+│   ├── PROJECT_SUMMARY.md        # Project overview
+│   └── FILE_TREE.txt             # This file
+│
+├── Configuration (5 files)
+│   ├── docker-compose.yml        # Orchestration configuration
+│   ├── .env.example              # Environment variables template
+│   ├── .env                      # Environment variables (auto-generated)
+│   ├── .gitignore                # Git ignore rules
+│   ├── start.sh                  # Quick start script
+│   └── stop.sh                   # Stop script
+│
+├── api/ - FastAPI Backend (5 files)
+│   ├── main.py                   # API endpoints and routing (400+ lines)
+│   ├── models.py                 # Pydantic data models (100+ lines)
+│   ├── database.py               # Database SDK implementations (400+ lines)
+│   ├── requirements.txt          # Python dependencies
+│   └── Dockerfile                # Container configuration
+│
+├── dashboard/ - Streamlit Frontend (4 files)
+│   ├── app.py                    # Dashboard application (400+ lines)
+│   ├── requirements.txt          # Python dependencies
+│   └── Dockerfile                # Container configuration
+│
+├── data-loader/ - PostgreSQL Initialization (4 files)
+│   ├── load_kiel_data.py         # Data loading script (200+ lines)
+│   ├── requirements.txt          # Python dependencies
+│   └── Dockerfile                # Container configuration
+│
+└── cron-job/ - Bike Data Sync (5 files)
+    ├── fetch_bikes.py            # Bike data fetcher (200+ lines)
+    ├── crontab                   # Cron schedule (every 5 min)
+    ├── requirements.txt          # Python dependencies
+    └── Dockerfile                # Container configuration
+
+TOTAL: 30 files
+- Python code: ~1,500 lines
+- Documentation: ~1,200 lines
+- Configuration: ~200 lines
+
+KEY FILES TO REVIEW:
+1. README.md - Main documentation
+2. docker-compose.yml - See how services connect
+3. api/main.py - API endpoints
+4. api/database.py - Database SDK examples
+5. dashboard/app.py - Dashboard implementation
