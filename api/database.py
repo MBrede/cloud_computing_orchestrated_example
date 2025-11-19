@@ -2,12 +2,12 @@
 Database connection management and SDK examples.
 
 This module demonstrates proper usage of:
-- mariadb for MariaDB (SQL database SDK)
+- mysql-connector-python for MySQL (SQL database SDK)
 - pymongo for MongoDB (NoSQL database SDK)
 - redis for caching
 
 Key learning points:
-1. Connection pooling for MariaDB
+1. Connection pooling for MySQL
 2. Context managers for safe connection handling
 3. Error handling and retries
 4. Cursor management in SQL
@@ -16,7 +16,8 @@ Key learning points:
 
 import os
 import time
-import mariadb
+import mysql.connector
+from mysql.connector import pooling, Error as MySQLError
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import redis
@@ -29,9 +30,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class MariaDBDatabase:
+class MySQLDatabase:
     """
-    MariaDB database connection manager using the mariadb connector.
+    MySQL database connection manager using mysql-connector-python.
 
     This class demonstrates:
     - Connection pooling for efficient resource usage
@@ -40,15 +41,13 @@ class MariaDBDatabase:
     - Transaction handling
     - Dict-based result rows for easier data access
 
-    The mariadb connector is the official MariaDB driver for Python.
-    It's written in C, providing excellent performance, and is specifically
-    optimized for MariaDB (not MySQL). This is the recommended SDK for
-    students working with MariaDB databases.
+    mysql-connector-python is the official MySQL driver from Oracle.
+    It's pure Python, well-maintained, and familiar to students who use MySQL.
     """
 
     def __init__(self):
-        """Initialize MariaDB connection pool."""
-        self.pool: Optional[mariadb.ConnectionPool] = None
+        """Initialize MySQL connection pool."""
+        self.pool: Optional[pooling.MySQLConnectionPool] = None
         self._initialize_pool()
 
     def _initialize_pool(self, retries=5):
@@ -61,31 +60,31 @@ class MariaDBDatabase:
         for attempt in range(retries):
             try:
                 # Create connection pool
-                self.pool = mariadb.ConnectionPool(
+                self.pool = pooling.MySQLConnectionPool(
                     pool_name="kiel_pool",
                     pool_size=10,
-                    host=os.getenv('MARIADB_HOST', 'mariadb'),
-                    port=int(os.getenv('MARIADB_PORT', '3306')),
-                    database=os.getenv('MARIADB_DB', 'kiel_data'),
-                    user=os.getenv('MARIADB_USER', 'kiel_user'),
-                    password=os.getenv('MARIADB_PASSWORD', 'kiel_secure_password_2024')
+                    pool_reset_session=True,
+                    host=os.getenv('MYSQL_HOST', 'mysql'),
+                    port=int(os.getenv('MYSQL_PORT', '3306')),
+                    database=os.getenv('MYSQL_DB', 'kiel_data'),
+                    user=os.getenv('MYSQL_USER', 'kiel_user'),
+                    password=os.getenv('MYSQL_PASSWORD', 'kiel_secure_password_2024'),
+                    autocommit=False  # Explicit transaction control
                 )
 
                 # Test connection
                 conn = self.pool.get_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT 1")
-                cursor.close()
+                conn.ping(reconnect=True, attempts=3, delay=1)
                 conn.close()
 
-                logger.info("MariaDB connection pool created successfully")
+                logger.info("MySQL connection pool created successfully")
                 return
-            except mariadb.Error as e:
-                logger.warning(f"MariaDB connection attempt {attempt + 1} failed: {e}")
+            except MySQLError as e:
+                logger.warning(f"MySQL connection attempt {attempt + 1} failed: {e}")
                 if attempt < retries - 1:
                     time.sleep(2 ** attempt)  # Exponential backoff
                 else:
-                    logger.error("Failed to connect to MariaDB after all retries")
+                    logger.error("Failed to connect to MySQL after all retries")
                     raise
 
     def get_connection(self):
@@ -93,7 +92,7 @@ class MariaDBDatabase:
         Get a connection from the pool.
 
         Returns:
-            mariadb connection object
+            mysql.connector connection object
 
         Example usage:
             conn = db.get_connection()
@@ -111,13 +110,13 @@ class MariaDBDatabase:
         Execute a SQL query with proper connection management.
 
         This demonstrates:
-        - Parameterized queries with ? placeholders (防止 SQL injection)
-        - Named dictionary cursor for easy column access
+        - Parameterized queries with %s placeholders (防止 SQL injection)
+        - Dictionary cursor for easy column access
         - Proper transaction handling
         - Automatic resource cleanup
 
         Args:
-            query: SQL query string (use ? for parameters)
+            query: SQL query string (use %s for parameters)
             params: Query parameters (prevents SQL injection)
             fetch: Whether to fetch and return results
 
@@ -126,7 +125,7 @@ class MariaDBDatabase:
 
         Example:
             results = db.execute_query(
-                "SELECT * FROM points_of_interest WHERE type = ?",
+                "SELECT * FROM points_of_interest WHERE type = %s",
                 ('museum',)
             )
         """
@@ -135,7 +134,7 @@ class MariaDBDatabase:
             conn = self.get_connection()
             cursor = conn.cursor(dictionary=True)  # Return rows as dictionaries
 
-            cursor.execute(query, params or ())
+            cursor.execute(query, params)
 
             if fetch:
                 results = cursor.fetchall()
@@ -146,13 +145,13 @@ class MariaDBDatabase:
                 cursor.close()
                 return None
 
-        except mariadb.Error as e:
+        except MySQLError as e:
             if conn:
                 conn.rollback()
             logger.error(f"Database query error: {e}")
             raise
         finally:
-            if conn and conn.is_connected():
+            if conn:
                 conn.close()
 
     def execute_many(self, query: str, params_list: List[tuple]) -> None:
@@ -168,7 +167,7 @@ class MariaDBDatabase:
 
         Example:
             db.execute_many(
-                "INSERT INTO points_of_interest (name, type, latitude, longitude) VALUES (?, ?, ?, ?)",
+                "INSERT INTO points_of_interest (name, type, latitude, longitude) VALUES (%s, %s, %s, %s)",
                 [('Museum', 'culture', 54.32, 10.13), ('Park', 'nature', 54.31, 10.12)]
             )
         """
@@ -181,20 +180,21 @@ class MariaDBDatabase:
             conn.commit()
             cursor.close()
 
-        except mariadb.Error as e:
+        except MySQLError as e:
             if conn:
                 conn.rollback()
             logger.error(f"Batch execution error: {e}")
             raise
         finally:
-            if conn and conn.is_connected():
+            if conn:
                 conn.close()
 
     def close(self):
         """Close all connections in the pool."""
         if self.pool:
-            self.pool.close()
-            logger.info("MariaDB connection pool closed")
+            # Connection pool doesn't have a direct close method
+            # Connections are closed when they're returned to the pool
+            logger.info("MySQL connection pool cleanup initiated")
 
 
 class MongoDatabase:
@@ -486,6 +486,6 @@ class RedisCache:
 
 
 # Global database instances
-mariadb_db = MariaDBDatabase()
+mysql_db = MySQLDatabase()
 mongo_db = MongoDatabase()
 redis_cache = RedisCache()

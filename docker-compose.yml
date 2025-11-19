@@ -1,21 +1,21 @@
 version: '3.8'
 
 services:
-  # MariaDB Database - Stores structured city data
-  mariadb:
-    image: mariadb:11
-    container_name: kiel-mariadb
+  # MySQL Database - Stores structured city data
+  mysql:
+    image: mysql:8
+    container_name: kiel-mysql
     environment:
-      MYSQL_DATABASE: ${MARIADB_DB}
-      MYSQL_USER: ${MARIADB_USER}
-      MYSQL_PASSWORD: ${MARIADB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
     networks:
       - kiel-network
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,20 +56,20 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Data Loader - Initializes MariaDB with Kiel city data
+  # Data Loader - Initializes MySQL with Kiel city data
   data-loader:
     build:
       context: ./data-loader
       dockerfile: Dockerfile
     container_name: kiel-data-loader
     environment:
-      MARIADB_HOST: ${MARIADB_HOST}
-      MARIADB_PORT: ${MARIADB_PORT}
-      MARIADB_DB: ${MARIADB_DB}
-      MARIADB_USER: ${MARIADB_USER}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_DB: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     depends_on:
-      mariadb:
+      mysql:
         condition: service_healthy
     networks:
       - kiel-network
@@ -105,11 +105,11 @@ services:
       dockerfile: Dockerfile
     container_name: kiel-api
     environment:
-      MARIADB_HOST: ${MARIADB_HOST}
-      MARIADB_PORT: ${MARIADB_PORT}
-      MARIADB_DB: ${MARIADB_DB}
-      MARIADB_USER: ${MARIADB_USER}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_DB: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MONGO_HOST: ${MONGO_HOST}
       MONGO_PORT: ${MONGO_PORT}
       MONGO_DB: ${MONGO_DB}
@@ -125,7 +125,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      mariadb:
+      mysql:
         condition: service_healthy
       mongodb:
         condition: service_healthy
@@ -160,8 +160,8 @@ services:
 
 # Named volumes for data persistence
 volumes:
-  mariadb_data:
-    name: kiel_mariadb_data
+  mysql_data:
+    name: kiel_mysql_data
   mongodb_data:
     name: kiel_mongodb_data
   redis_data:

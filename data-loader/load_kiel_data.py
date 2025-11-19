@@ -1,8 +1,8 @@
 """
-MariaDB Data Loader for Kiel City Points of Interest
+MySQL Data Loader for Kiel City Points of Interest
 
 This script demonstrates:
-1. Database connection with mariadb connector
+1. Database connection with mysql-connector-python
 2. Table creation with SQL DDL
 3. Batch data insertion
 4. Error handling and retries
@@ -13,41 +13,42 @@ The script populates the database with real Kiel landmarks and POIs.
 
 import os
 import time
-import mariadb
+import mysql.connector
+from mysql.connector import Error as MySQLError
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def wait_for_mariadb(max_retries=30):
+def wait_for_mysql(max_retries=30):
     """
-    Wait for MariaDB to be ready.
+    Wait for MySQL to be ready.
     
     Args:
         max_retries: Maximum number of connection attempts
     
     Returns:
-        mariadb connection object
+        mysql.connector connection object
     """
-    logger.info("Waiting for MariaDB to be ready...")
+    logger.info("Waiting for MySQL to be ready...")
     
     for attempt in range(max_retries):
         try:
-            conn = mariadb.connect(
-                host=os.getenv('MARIADB_HOST', 'mariadb'),
-                port=int(os.getenv('MARIADB_PORT', '3306')),
-                database=os.getenv('MARIADB_DB', 'kiel_data'),
-                user=os.getenv('MARIADB_USER', 'kiel_user'),
-                password=os.getenv('MARIADB_PASSWORD', 'kiel_secure_password_2024')
+            conn = mysql.connector.connect(
+                host=os.getenv('MYSQL_HOST', 'mysql'),
+                port=int(os.getenv('MYSQL_PORT', '3306')),
+                database=os.getenv('MYSQL_DB', 'kiel_data'),
+                user=os.getenv('MYSQL_USER', 'kiel_user'),
+                password=os.getenv('MYSQL_PASSWORD', 'kiel_secure_password_2024')
             )
-            logger.info("✓ MariaDB is ready!")
+            logger.info("✓ MySQL is ready!")
             return conn
-        except mariadb.Error as e:
-            logger.warning(f"Attempt {attempt + 1}/{max_retries}: MariaDB not ready yet... ({e})")
+        except MySQLError as e:
+            logger.warning(f"Attempt {attempt + 1}/{max_retries}: MySQL not ready yet... ({e})")
             time.sleep(2)
     
-    raise Exception("MariaDB did not become ready in time")
+    raise Exception("MySQL did not become ready in time")
 
 
 def create_table(conn):
@@ -60,7 +61,7 @@ def create_table(conn):
     - Primary key and indexes
     
     Args:
-        conn: mariadb connection object
+        conn: mysql.connector connection object
     """
     logger.info("Creating points_of_interest table...")
     
@@ -70,7 +71,7 @@ def create_table(conn):
     cursor.execute("DROP TABLE IF EXISTS points_of_interest")
     
     # Create table with appropriate columns
-    # Note: MariaDB uses AUTO_INCREMENT instead of SERIAL
+    # Note: MySQL uses AUTO_INCREMENT
     cursor.execute("""
         CREATE TABLE points_of_interest (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -108,7 +109,7 @@ def insert_kiel_pois(conn):
     Data includes actual Kiel landmarks, museums, parks, and infrastructure.
     
     Args:
-        conn: mariadb connection object
+        conn: mysql.connector connection object
     """
     logger.info("Inserting Kiel Points of Interest...")
     
@@ -165,11 +166,11 @@ def insert_kiel_pois(conn):
     
     cursor = conn.cursor()
     
-    # Note: MariaDB connector uses ? placeholders
+    # Note: MySQL connector uses %s placeholders
     cursor.executemany(
         """
         INSERT INTO points_of_interest (name, type, latitude, longitude, description)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
         """,
         kiel_pois
     )
@@ -184,7 +185,7 @@ def verify_data(conn):
     Verify that data was inserted correctly.
     
     Args:
-        conn: mariadb connection object
+        conn: mysql.connector connection object
     """
     logger.info("Verifying data insertion...")
     
@@ -204,12 +205,12 @@ def verify_data(conn):
 def main():
     """Main execution function."""
     logger.info("=" * 60)
-    logger.info("Kiel City Data Loader - MariaDB Initialization")
+    logger.info("Kiel City Data Loader - MySQL Initialization")
     logger.info("=" * 60)
     
     try:
-        # Connect to MariaDB
-        conn = wait_for_mariadb()
+        # Connect to MySQL
+        conn = wait_for_mysql()
         
         # Create database schema
         create_table(conn)
