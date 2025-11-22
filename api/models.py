@@ -64,7 +64,7 @@ class BikeStationHistory(BaseModel):
 class HealthCheck(BaseModel):
     """Model for health check response."""
     status: str = Field(..., description="Overall system status")
-    postgres: bool = Field(..., description="PostgreSQL connection status")
+    postgres: bool = Field(..., description="MySQL connection status")
     mongodb: bool = Field(..., description="MongoDB connection status")
     redis: bool = Field(..., description="Redis connection status")
     timestamp: datetime = Field(..., description="Time of health check")
@@ -72,7 +72,7 @@ class HealthCheck(BaseModel):
 
 class Stats(BaseModel):
     """Model for database statistics."""
-    total_pois: int = Field(..., description="Total points of interest in PostgreSQL")
+    total_pois: int = Field(..., description="Total points of interest in MySQL")
     total_stations: int = Field(..., description="Total bike stations in MongoDB")
     total_bikes_available: int = Field(..., description="Total bikes currently available")
     cache_hit_rate: Optional[float] = Field(None, description="Redis cache hit rate")
