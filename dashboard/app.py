@@ -320,8 +320,7 @@ def main():
 
     # Heatmap options
     st.sidebar.subheader("Heatmap Layer")
-    heatmap_enabled = st.sidebar.checkbox("Enable Demographic Heatmap", value=False)
-    heatmap_metric = None
+    heatmap_enabled = st.sidebar.checkbox("Enable Demographic Heatmap", value=True)
 
     if heatmap_enabled:
         heatmap_metric = st.sidebar.selectbox(
@@ -333,6 +332,8 @@ def main():
                 "female_ratio": "Female Ratio (%)"
             }[x]
         )
+    else:
+        heatmap_metric = None
 
     # Bike filters
     if show_bikes:

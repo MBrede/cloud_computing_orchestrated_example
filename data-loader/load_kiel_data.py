@@ -186,37 +186,87 @@ def create_tables(conn):
     logger.info(">> Tables created successfully")
 
 
-def import_stadtteile_from_csv(conn, csv_path):
+def import_stadtteile_from_all_csvs(conn, data_dir):
     """
-    Extract unique Stadtteile from a CSV file and insert into stadtteile table.
+    Scan all CSV files to collect unique Stadtteile and insert into stadtteile table.
+    This ensures we have a complete districts table before importing demographic data.
 
     Args:
         conn: mysql.connector connection object
-        csv_path: Path to CSV file containing Stadtteil data
+        data_dir: Path to directory containing CSV files
     """
     cursor = conn.cursor()
-    stadtteile = {}
+    stadtteile_map = {}  # Map: stadtteil_nr -> (name, lat, lon)
 
-    with open(csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            stadtteil_nr = int(row['Stadtteilnummer'])
-            stadtteil_name = row['Stadtteil']
-            lat = row.get('lat', '').strip()
-            lon = row.get('lon', '').strip()
+    # First pass: collect all stadtteile with numbers (from files that have Stadtteilnummer)
+    csv_files = list(Path(data_dir).glob('*.csv'))
 
-            # Convert coordinates to float or None
-            try:
-                latitude = float(lat) if lat else None
-                longitude = float(lon) if lon else None
-            except (ValueError, TypeError):
-                latitude = None
-                longitude = None
+    for csv_file in csv_files:
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter=';')
+            headers = reader.fieldnames
 
-            stadtteile[stadtteil_nr] = (stadtteil_name, latitude, longitude)
+            # Check if this CSV has Stadtteilnummer
+            if 'Stadtteilnummer' in headers:
+                for row in reader:
+                    stadtteil_nr = int(row['Stadtteilnummer'])
+                    stadtteil_name = row['Stadtteil'].strip()
+                    lat = row.get('lat', '').strip()
+                    lon = row.get('lon', '').strip()
 
-    # Insert stadtteile with coordinates
-    for nr, (name, lat, lon) in sorted(stadtteile.items()):
+                    # Convert coordinates to float or None
+                    try:
+                        latitude = float(lat) if lat else None
+                        longitude = float(lon) if lon else None
+                    except (ValueError, TypeError):
+                        latitude = None
+                        longitude = None
+
+                    stadtteile_map[stadtteil_nr] = (stadtteil_name, latitude, longitude)
+
+    # Second pass: collect stadtteile without numbers (from files that only have Stadtteil name)
+    # We'll need to create a name-to-number mapping
+    stadtteile_by_name = {name: nr for nr, (name, _, _) in stadtteile_map.items()}
+    next_nr = max(stadtteile_map.keys()) + 1 if stadtteile_map else 1
+
+    for csv_file in csv_files:
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter=';')
+            headers = reader.fieldnames
+
+            # Check if this CSV has Stadtteil but NOT Stadtteilnummer
+            stadtteil_col = None
+            if 'Stadtteil' in headers and 'Stadtteilnummer' not in headers:
+                stadtteil_col = 'Stadtteil'
+            elif 'Stadtteile' in headers:
+                stadtteil_col = 'Stadtteile'
+
+            if stadtteil_col:
+                for row in reader:
+                    stadtteil_name = row[stadtteil_col].strip()
+
+                    # Skip if already in map
+                    if stadtteil_name in stadtteile_by_name:
+                        continue
+
+                    # Get coordinates
+                    lat = row.get('lat', '').strip()
+                    lon = row.get('lon', '').strip()
+
+                    try:
+                        latitude = float(lat) if lat else None
+                        longitude = float(lon) if lon else None
+                    except (ValueError, TypeError):
+                        latitude = None
+                        longitude = None
+
+                    # Assign a new number
+                    stadtteile_map[next_nr] = (stadtteil_name, latitude, longitude)
+                    stadtteile_by_name[stadtteil_name] = next_nr
+                    next_nr += 1
+
+    # Insert all stadtteile into the database
+    for nr, (name, lat, lon) in sorted(stadtteile_map.items()):
         cursor.execute(
             "INSERT IGNORE INTO stadtteile (stadtteil_nr, name, latitude, longitude) VALUES (%s, %s, %s, %s)",
             (nr, name, lat, lon)
@@ -224,7 +274,27 @@ def import_stadtteile_from_csv(conn, csv_path):
 
     conn.commit()
     cursor.close()
-    logger.info(f">> Inserted {len(stadtteile)} Stadtteile with coordinates")
+    logger.info(f">> Inserted {len(stadtteile_map)} Stadtteile with coordinates")
+
+    return stadtteile_by_name  # Return name-to-number mapping for later use
+
+
+def get_stadtteil_nr(conn, stadtteil_name):
+    """
+    Get stadtteil_nr for a given district name.
+
+    Args:
+        conn: mysql.connector connection object
+        stadtteil_name: Name of the district
+
+    Returns:
+        int: stadtteil_nr or None if not found
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT stadtteil_nr FROM stadtteile WHERE name = %s", (stadtteil_name.strip(),))
+    result = cursor.fetchone()
+    cursor.close()
+    return result[0] if result else None
 
 
 def import_population_by_gender(conn, csv_path):
@@ -310,17 +380,19 @@ def import_population_by_age(conn, csv_path):
     logger.info(f">> Imported {count} population by age records")
 
 
-def import_generic_data(conn, csv_path, table_name, merkmal_column):
+def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_map):
     """
     Generic importer for CSV files with similar structure.
+    Handles CSVs with or without Stadtteilnummer by looking up district names.
 
     Args:
         conn: mysql.connector connection object
         csv_path: Path to the CSV file
         table_name: Target table name
         merkmal_column: Name of the column containing the category/type
+        stadtteile_map: Dict mapping district names to numbers
     """
-    logger.info(f"Importing data from {csv_path} into {table_name}...")
+    logger.info(f"Importing data from {Path(csv_path).name} into {table_name}...")
     cursor = conn.cursor()
     count = 0
 
@@ -328,22 +400,39 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column):
         reader = csv.DictReader(f, delimiter=';')
         headers = reader.fieldnames
 
-        for i, row in enumerate(reader):
+        # Detect stadtteil column
+        stadtteil_col = None
+        has_number = False
+        if 'Stadtteilnummer' in headers:
+            has_number = True
+        elif 'Stadtteil' in headers:
+            stadtteil_col = 'Stadtteil'
+        elif 'Stadtteile' in headers:
+            stadtteil_col = 'Stadtteile'
+
+        # Skip metadata columns
+        skip_columns = {'Land', 'Stadt', 'Kategorie', 'Merkmal', 'Datum', 'Jahr',
+                       'Stadtteilnummer', 'Stadtteil', 'Stadtteile', 'lat', 'lon'}
+
+        for row in reader:
+            # Get stadtteil_nr
+            if has_number:
+                stadtteil_nr = int(row['Stadtteilnummer'])
+            elif stadtteil_col:
+                stadtteil_name = row[stadtteil_col].strip()
+                stadtteil_nr = stadtteile_map.get(stadtteil_name)
+                if not stadtteil_nr:
+                    continue  # Skip unknown districts
+            else:
+                continue  # No district info, skip
+
+            # Get date
             try:
                 datum = row['Datum'].replace('_', '-')
             except KeyError:
-                datum = row['Jahr'].replace('_', '-') + "-01-01"
-            try:
-                stadtteil_nr = int(row['Stadtteilnummer'])
-            except KeyError:
-                stadtteil_nr = i
-            merkmal = row.get('Merkmal', '')
+                datum = row.get('Jahr', '2023').replace('_', '-') + "-01-01"
 
-            # Find data columns (skip metadata columns)
-            skip_columns = ['Land', 'Stadt', 'Kategorie', 'Merkmal', 
-                            'Datum','Jahr',
-                           'Stadtteilnummer', 'Stadtteil']
-
+            # Import data columns
             for header in headers:
                 if header not in skip_columns and row.get(header):
                     try:
@@ -357,8 +446,7 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column):
                         )
                         count += 1
                     except ValueError:
-                        # Skip non-numeric values
-                        pass
+                        pass  # Skip non-numeric values
 
     conn.commit()
     cursor.close()
@@ -382,36 +470,37 @@ def import_all_csv_data(conn):
         logger.error("No data directory found!")
         return
 
-    # First, import stadtteile from the gender file (has all districts)
-    gender_file = data_dir / 'kiel_bevoelkerung_stadtteile_einwohner_geschlecht.csv'
-    if gender_file.exists():
-        import_stadtteile_from_csv(conn, gender_file)
-        import_population_by_gender(conn, gender_file)
+    # STEP 1: Build complete stadtteile table from all CSVs
+    logger.info("==> Building complete stadtteile table from all CSVs")
+    stadtteile_map = import_stadtteile_from_all_csvs(conn, data_dir)
 
-    # Import age groups
-    age_file = data_dir / 'kiel_bevoelkerung_altersgruppen_stadtteile.csv'
-    if age_file.exists():
-        import_population_by_age(conn, age_file)
+    # STEP 2: Import demographic data using the stadtteile mapping
+    csv_configs = [
+        ('kiel_bevoelkerung_stadtteile_einwohner_geschlecht.csv', None, None),  # Special handler
+        ('kiel_bevoelkerung_altersgruppen_stadtteile.csv', None, None),  # Special handler
+        ('kiel_bevoelkerung_einwohner_nach_religionszugehoerigkeit_in_den_stadtteilen.csv',
+         'population_by_religion', 'religion'),
+        ('kiel_bevoelkerung_einwohner_nach_familienstand_in_den_stadtteilen.csv',
+         'population_by_family_status', 'family_status'),
+        ('kiel_bevoelkerung_auslaender_nach_ausgesuchten_nationalitaeten_in_den_stadtteilen.csv',
+         'foreigners_by_nationality', 'nationality'),
+        ('kiel_bevoelkerung_haushalte_nach_haushaltstypen_und_personenanzahl_in_den_stadtteilen.csv',
+         'households', 'household_type'),
+    ]
 
-    # Import religion data
-    religion_file = data_dir / 'kiel_bevoelkerung_einwohner_nach_religionszugehoerigkeit_in_den_stadtteilen.csv'
-    if religion_file.exists():
-        import_generic_data(conn, religion_file, 'population_by_religion', 'religion')
+    for filename, table_name, column_name in csv_configs:
+        file_path = data_dir / filename
+        if not file_path.exists():
+            logger.warning(f"File not found: {filename}")
+            continue
 
-    # Import family status data
-    family_file = data_dir / 'kiel_bevoelkerung_einwohner_nach_familienstand_in_den_stadtteilen.csv'
-    if family_file.exists():
-        import_generic_data(conn, family_file, 'population_by_family_status', 'family_status')
-
-    # Import foreigners by nationality
-    nationality_file = data_dir / 'kiel_bevoelkerung_auslaender_nach_ausgesuchten_nationalitaeten_in_den_stadtteilen.csv'
-    if nationality_file.exists():
-        import_generic_data(conn, nationality_file, 'foreigners_by_nationality', 'nationality')
-
-    # Import households
-    households_file = data_dir / 'kiel_bevoelkerung_haushalte_nach_haushaltstypen_und_personenanzahl_in_den_stadtteilen.csv'
-    if households_file.exists():
-        import_generic_data(conn, households_file, 'households', 'household_type')
+        # Use special handlers for gender and age data (they have different structures)
+        if filename == 'kiel_bevoelkerung_stadtteile_einwohner_geschlecht.csv':
+            import_population_by_gender(conn, file_path)
+        elif filename == 'kiel_bevoelkerung_altersgruppen_stadtteile.csv':
+            import_population_by_age(conn, file_path)
+        else:
+            import_generic_data(conn, file_path, table_name, column_name, stadtteile_map)
 
 
 def verify_data(conn):
