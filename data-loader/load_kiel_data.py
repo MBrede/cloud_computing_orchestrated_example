@@ -276,7 +276,9 @@ def import_stadtteile_from_all_csvs(conn, data_dir):
     cursor.close()
     logger.info(f">> Inserted {len(stadtteile_map)} Stadtteile with coordinates")
 
-    return stadtteile_by_name  # Return name-to-number mapping for later use
+    # Return both name-to-number mapping and set of valid numbers for validation
+    valid_stadtteile_nrs = set(stadtteile_map.keys())
+    return stadtteile_by_name, valid_stadtteile_nrs
 
 
 def get_stadtteil_nr(conn, stadtteil_name):
@@ -380,7 +382,7 @@ def import_population_by_age(conn, csv_path):
     logger.info(f">> Imported {count} population by age records")
 
 
-def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_map):
+def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_map, valid_stadtteile_nrs):
     """
     Generic importer for CSV files with similar structure.
     Handles CSVs with or without Stadtteilnummer by looking up district names.
@@ -391,6 +393,7 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_m
         table_name: Target table name
         merkmal_column: Name of the column containing the category/type
         stadtteile_map: Dict mapping district names to numbers
+        valid_stadtteile_nrs: Set of valid stadtteil numbers for validation
     """
     logger.info(f"Importing data from {Path(csv_path).name} into {table_name}...")
     cursor = conn.cursor()
@@ -418,6 +421,9 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_m
             # Get stadtteil_nr
             if has_number:
                 stadtteil_nr = int(row['Stadtteilnummer'])
+                # Validate that this stadtteil_nr exists in stadtteile table
+                if stadtteil_nr not in valid_stadtteile_nrs:
+                    continue  # Skip if district doesn't exist
             elif stadtteil_col:
                 stadtteil_name = row[stadtteil_col].strip()
                 stadtteil_nr = stadtteile_map.get(stadtteil_name)
@@ -487,7 +493,7 @@ def import_all_csv_data(conn):
 
     # STEP 1: Build complete stadtteile table from all CSVs
     logger.info("==> Building complete stadtteile table from all CSVs")
-    stadtteile_map = import_stadtteile_from_all_csvs(conn, data_dir)
+    stadtteile_map, valid_stadtteile_nrs = import_stadtteile_from_all_csvs(conn, data_dir)
 
     # STEP 2: Import demographic data using the stadtteile mapping
     csv_configs = [
@@ -515,7 +521,7 @@ def import_all_csv_data(conn):
         elif filename == 'kiel_bevoelkerung_altersgruppen_stadtteile.csv':
             import_population_by_age(conn, file_path)
         else:
-            import_generic_data(conn, file_path, table_name, column_name, stadtteile_map)
+            import_generic_data(conn, file_path, table_name, column_name, stadtteile_map, valid_stadtteile_nrs)
 
 
 def verify_data(conn):
