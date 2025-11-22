@@ -116,10 +116,10 @@ The Kiel City Data Platform is a microservices-based application demonstrating c
 ### 4. Worker Services
 
 #### Data Loader (data-loader/)
-- **Purpose**: Initialize PostgreSQL with Kiel POI data
+- **Purpose**: Initialize MySQL with Kiel POI data
 - **Lifecycle**: Runs once at startup, then exits
 - **Process**:
-  1. Wait for PostgreSQL to be ready
+  1. Wait for MySQL to be ready
   2. Create database schema
   3. Insert 30+ Kiel POIs
   4. Verify data integrity
@@ -139,8 +139,8 @@ The Kiel City Data Platform is a microservices-based application demonstrating c
 ### 1. Initial Startup
 ```
 docker-compose up
-  └─> Start PostgreSQL, MongoDB, Redis
-      └─> Run data-loader (waits for PostgreSQL)
+  └─> Start MySQL, MongoDB, Redis
+      └─> Run data-loader (waits for MySQL)
           └─> Populate POI data
               └─> Start API (waits for all DBs + data-loader)
                   └─> Start Dashboard (waits for API)

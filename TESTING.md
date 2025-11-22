@@ -408,7 +408,7 @@ docker-compose down --rmi all -v
 Your system is working correctly if:
 
 1. ✅ All 6 containers start successfully
-2. ✅ Data loader populates PostgreSQL with 30 POIs
+2. ✅ Data loader populates MySQL with 30 POIs
 3. ✅ Cron job fetches bike data into MongoDB
 4. ✅ API responds to all endpoints with correct status codes
 5. ✅ Dashboard displays map with POI and bike markers
