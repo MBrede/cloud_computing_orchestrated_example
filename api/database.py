@@ -459,7 +459,14 @@ class RedisCache:
             ttl: Time to live in seconds (default 300 = 5 minutes)
         """
         try:
-            self.client.setex(key, ttl, json.dumps(value))
+            if isinstance(value, dict):
+                content = {k:str(v)
+                           for v in value.items()}
+            elif isinstance(value, list):
+                content = [str(v) for v in value]
+            else:
+                content = str(value)
+            self.client.setex(key, ttl, json.dumps(content))
         except Exception as e:
             logger.error(f"Redis set error: {e}")
     
