@@ -79,7 +79,7 @@ def fetch_stadtteil_demographics(stadtteil_nr):
 
 
 @st.cache_data(ttl=30)
-def fetch_bike_stations(min_bikes=0):
+def fetch_bike_stations(min_bikes=0, min_cargo_bikes=0):
     """
     Fetch bike stations from API.
 
@@ -90,7 +90,7 @@ def fetch_bike_stations(min_bikes=0):
         list: Bike stations data
     """
     try:
-        params = {'min_bikes': min_bikes}
+        params = {'min_bikes': min_bikes, 'min_cargo_bikes': min_cargo_bikes}
         response = requests.get(f"{API_BASE_URL}/api/bikes/stations", params=params, timeout=5)
         response.raise_for_status()
         return response.json()
@@ -240,7 +240,8 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
 
         for station in bike_stations:
             bikes = station.get('bikes_available', 0)
-
+            cargo_bikes = station.get('cargo_bikes_available', 0)
+            
             # Color based on availability
             if bikes == 0:
                 color = 'red'
@@ -257,6 +258,7 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
                 popup=folium.Popup(
                     f"<b>🚲 {station['name']}</b><br>"
                     f"Bikes available: {bikes}<br>"
+                    f"Cargo bikes available: {cargo_bikes}<br>"
                     f"Capacity: {station.get('capacity', 'N/A')}<br>"
                     f"Last updated: {station.get('last_updated', 'N/A')}",
                     max_width=300
@@ -332,9 +334,11 @@ def main():
     if show_bikes:
         st.sidebar.subheader("Bike Station Filters")
         min_bikes = st.sidebar.slider("Minimum bikes available", 0, 10, 0)
+        min_cargo_bikes = st.sidebar.slider("Minimum bikes available", 0, 10, 0)
     else:
         min_bikes = 0
-
+        min_cargo_bikes = 0
+    
     # Auto-refresh
     st.sidebar.subheader("Auto-refresh")
     auto_refresh = st.sidebar.checkbox("Enable auto-refresh (30s)", value=False)
