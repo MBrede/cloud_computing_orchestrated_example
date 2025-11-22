@@ -212,7 +212,7 @@ def create_map(_stadtteile_with_demographics, _bike_stations, show_stadtteile=Tr
             heatmap_group.add_to(m)
 
     # Add Stadtteile markers
-    if show_stadtteile and stadtteile_with_demographics:
+    if show_stadtteile and _stadtteile_with_demographics:
         stadtteil_group = folium.FeatureGroup(name='Stadtteile (Districts)', show=True)
 
         for district in _stadtteile_with_demographics:
