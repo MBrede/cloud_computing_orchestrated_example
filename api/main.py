@@ -30,38 +30,40 @@ from models import (
 )
 from database import mysql_db, mongo_db, redis_cache
 
+description = """
+# Kiel City Data Platform API
+
+A comprehensive API demonstrating cloud computing concepts with multiple database systems.
+
+## Features
+
+- **MySQL Integration**: Structured demographic data (Stadtteile/Districts)
+- **MongoDB Integration**: Time-series bike sharing data
+- **Redis Caching**: Performance optimization for frequently accessed data
+- **Demographic Data API**: Population statistics by age, gender, and district
+- **Data Validation**: Automatic request/response validation with Pydantic
+
+## Database SDKs Used
+
+- **mysql-connector-python**: Official MySQL driver for Python
+- **pymongo**: MongoDB driver for Python
+- **redis-py**: Redis client for Python
+
+## Learning Objectives
+
+This API serves as a practical example for:
+- RESTful API design patterns
+- Multi-database architecture
+- Caching strategies
+- Container orchestration with Docker Compose
+- Swagger/OpenAPI documentation
+"""
+
 # Initialize FastAPI app with metadata for Swagger documentation
 app = FastAPI(
     title=os.getenv('API_TITLE', 'Kiel City Data Platform'),
     version=os.getenv('API_VERSION', '1.0.0'),
-    description="""
-    # Kiel City Data Platform API
-    
-    A comprehensive API demonstrating cloud computing concepts with multiple database systems.
-    
-    ## Features
-
-    - **MySQL Integration**: Structured demographic data (Stadtteile/Districts)
-    - **MongoDB Integration**: Time-series bike sharing data
-    - **Redis Caching**: Performance optimization for frequently accessed data
-    - **Demographic Data API**: Population statistics by age, gender, and district
-    - **Data Validation**: Automatic request/response validation with Pydantic
-    
-    ## Database SDKs Used
-
-    - **mysql-connector-python**: Official MySQL driver for Python
-    - **pymongo**: MongoDB driver for Python
-    - **redis-py**: Redis client for Python
-    
-    ## Learning Objectives
-    
-    This API serves as a practical example for:
-    - RESTful API design patterns
-    - Multi-database architecture
-    - Caching strategies
-    - Container orchestration with Docker Compose
-    - Swagger/OpenAPI documentation
-    """,
+    description=description,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json"
@@ -163,10 +165,12 @@ async def get_stats():
     try:
         total_stations = mongo_db.db.bike_stations.count_documents({})
         pipeline = [
-            {"$group": {"_id": None, "total": {"$sum": "$bikes_available"}}}
+            {"$group": {"_id": None, "total": {"$sum": "$bikes_available"},
+                        "total_cargo": {"$sum": "$cargo_bikes_available"}}}
         ]
         result = mongo_db.aggregate('bike_stations', pipeline)
         total_bikes = result[0]['total'] if result else 0
+        total_cargo_bikes = result[0]['total_cargo'] if result else 0
     except Exception as e:
         print(f"Error counting bikes: {e}")
     
@@ -175,6 +179,7 @@ async def get_stats():
         total_population=total_population,
         total_stations=total_stations,
         total_bikes_available=total_bikes,
+        total_cargo_bikes_available=total_cargo_bikes,
         cache_hit_rate=None  # Could be calculated if Redis tracking is implemented
     )
 
@@ -375,6 +380,7 @@ async def get_stadtteil_population(stadtteil_nr: int):
 )
 async def list_bike_stations(
     min_bikes: int = Query(0, ge=0, description="Minimum bikes available"),
+    min_cargo_bikes: int = Query(0, ge=0, description="Minimum cargo bikes available"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of results")
 ):
     """
@@ -393,13 +399,14 @@ async def list_bike_stations(
         List[BikeStation]: List of bike stations
     """
     # Try cache first (short TTL for dynamic data)
-    cache_key = f"bikes:stations:min:{min_bikes}:limit:{limit}"
+    cache_key = f"bikes:stations:min:{min_bikes}:min_cargo:{min_cargo_bikes}:limit:{limit}"
     cached = redis_cache.get(cache_key)
     if cached:
         return cached
     
     try:
-        query = {"bikes_available": {"$gte": min_bikes}}
+        query = {"bikes_available": {"$gte": min_bikes}, 
+                 "cargo_bikes_available": {"$gte": min_cargo_bikes}}
         stations = mongo_db.find_many('bike_stations', query, limit=limit)
         
         # Cache for 1 minute (bike availability changes frequently)

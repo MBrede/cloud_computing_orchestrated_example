@@ -32,7 +32,7 @@ def get_coords(stadtteil):
     return None, None
 
 if __name__ == '__main__':
-    folder = Path('./data')
+    folder = Path('./data-loader/data')
     csv_files = list(folder.glob('*.csv'))
 
     stadtteile = set()

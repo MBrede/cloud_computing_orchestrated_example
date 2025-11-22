@@ -91,7 +91,8 @@ def fetch_bike_stations(min_bikes=0, min_cargo_bikes=0):
     """
     try:
         params = {'min_bikes': min_bikes, 'min_cargo_bikes': min_cargo_bikes}
-        response = requests.get(f"{API_BASE_URL}/api/bikes/stations", params=params, timeout=5)
+        response = requests.get(f"{API_BASE_URL}/api/bikes/stations", 
+                                params=params, timeout=5)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -150,8 +151,11 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
     m = folium.Map(
         location=KIEL_CENTER,
         zoom_start=12,
-        tiles='OpenStreetMap'
+        tiles=None
     )
+    
+    folium.TileLayer("OpenStreetMap", overlay=False, control=True, 
+                     show=True).add_to(m)
 
     # Add demographic heatmap if requested
     if heatmap_metric and stadtteile_with_demographics:
@@ -334,7 +338,7 @@ def main():
     if show_bikes:
         st.sidebar.subheader("Bike Station Filters")
         min_bikes = st.sidebar.slider("Minimum bikes available", 0, 10, 0)
-        min_cargo_bikes = st.sidebar.slider("Minimum bikes available", 0, 10, 0)
+        min_cargo_bikes = st.sidebar.slider("Minimum cargo bikes available", 0, 10, 0)
     else:
         min_bikes = 0
         min_cargo_bikes = 0
@@ -372,7 +376,7 @@ def main():
                     if demo:
                         stadtteile_with_demographics.append(demo)
 
-            bike_stations = fetch_bike_stations(min_bikes) if show_bikes else []
+            bike_stations = fetch_bike_stations(min_bikes, min_cargo_bikes) if show_bikes else []
 
         # Create and display map
         m = create_map(stadtteile_with_demographics, bike_stations, show_stadtteile,

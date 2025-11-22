@@ -1,7 +1,7 @@
 Land;Stadt;Kategorie;Jahr;Stadtteil;Tuerkei;Polen;Irak;Russland;Ukraine;Syrien;Bulgarien;lat;lon
-de-sh;Kiel;Bevoelkerung;2023;Altstadt        ;8;4.0;9;16;21;7;6;;
+de-sh;Kiel;Bevoelkerung;2023;Altstadt        ;8;4.0;9;16;21;7;6;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2023;Vorstadt      ;11;8.0;5;22;16;12;1;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2023;Exerzierplatz   ;35;16.0;24;18;36;32;10;;
+de-sh;Kiel;Bevoelkerung;2023;Exerzierplatz   ;35;16.0;24;18;36;32;10;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2023;Damperhof  ;12;12.0;11;9;24;19;8;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2023;Brunswik    ;33;21.0;14;20;39;40;4;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2023;Duesternbrook  ;12;5.0;1;7;12;2;3;;
@@ -21,17 +21,17 @@ de-sh;Kiel;Bevoelkerung;2023;Pries        ;122;38.0;67;31;153;163;5;54.3979145;1
 de-sh;Kiel;Bevoelkerung;2023;Friedrichsort   ;70;25.0;17;7;18;51;;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2023;Neumuehlen/Dietrichsdorf;456;102.0;223;56;194;650;70;;
 de-sh;Kiel;Bevoelkerung;2023;Elmschenhagen;275;138.0;188;31;168;339;48;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2023;Suchsdorf ;36;25.0;9;13;26;20;6;;
+de-sh;Kiel;Bevoelkerung;2023;Suchsdorf ;36;25.0;9;13;26;20;6;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2023;Schilksee  ;7;23.0;7;15;25;14;0;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2023;Mettenhof ;448;342.0;833;169;353;1412;15;;
+de-sh;Kiel;Bevoelkerung;2023;Mettenhof ;448;342.0;833;169;353;1412;15;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2023;Russee    ;41;33.0;25;14;31;33;3;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2023;Meimersdorf  ;34;14.0;4;5;14;3;7;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2023;Moorsee    ;42;4.0;17;2;3;19;1;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2023;Wellsee    ;70;71.0;31;29;35;18;13;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2023;Roenne     ;0;0.0;1;1;0;0;0;;
-de-sh;Kiel;Bevoelkerung;2022;Altstadt        ;5;6.0;11;16;22;5;8;;
+de-sh;Kiel;Bevoelkerung;2022;Altstadt        ;5;6.0;11;16;22;5;8;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2022;Vorstadt      ;8;8.0;5;22;10;15;0;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2022;Exerzierplatz   ;33;32.0;22;13;28;45;11;;
+de-sh;Kiel;Bevoelkerung;2022;Exerzierplatz   ;33;32.0;22;13;28;45;11;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2022;Damperhof  ;17;18.0;13;9;15;29;8;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2022;Brunswik    ;33;22.0;13;13;38;36;3;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2022;Duesternbrook  ;16;6.0;.;12;92;3;0;;
@@ -51,17 +51,17 @@ de-sh;Kiel;Bevoelkerung;2022;Pries        ;115;44.0;64;27;113;158;3;54.3979145;1
 de-sh;Kiel;Bevoelkerung;2022;Friedrichsort   ;73;25.0;16;7;11;33;0;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2022;Neumuehlen/Dietrichsdorf;485;105.0;200;43;127;617;80;;
 de-sh;Kiel;Bevoelkerung;2022;Elmschenhagen;258;155.0;177;31;119;347;47;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2022;Suchsdorf ;31;24.0;11;13;23;22;9;;
+de-sh;Kiel;Bevoelkerung;2022;Suchsdorf ;31;24.0;11;13;23;22;9;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2022;Schilksee  ;7;26.0;4;17;26;13;0;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2022;Mettenhof ;441;388.0;860;187;247;1419;14;;
+de-sh;Kiel;Bevoelkerung;2022;Mettenhof ;441;388.0;860;187;247;1419;14;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2022;Russee    ;42;30.0;27;14;30;29;.;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2022;Meimersdorf  ;35;14.0;4;5;26;.;7;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2022;Moorsee    ;42;8.0;22;.;5;16;.;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2022;Wellsee    ;65;68.0;34;27;29;34;13;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2022;Roenne     ;0;0.0;0;.;.;0;0;;
-de-sh;Kiel;Bevoelkerung;2021;Altstadt        ;6;5.0;10;14;-;7;-;;
+de-sh;Kiel;Bevoelkerung;2021;Altstadt        ;6;5.0;10;14;-;7;-;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2021;Vorstadt      ;8;6.0;4;11;-;19;-;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2021;Exerzierplatz   ;34;30.0;22;13;-;43;-;;
+de-sh;Kiel;Bevoelkerung;2021;Exerzierplatz   ;34;30.0;22;13;-;43;-;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2021;Damperhof  ;17;19.0;11;5;-;38;-;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2021;Brunswik    ;39;24.0;9;9;-;35;-;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2021;Duesternbrook  ;5;9.0;1;12;-;5;-;;
@@ -81,17 +81,17 @@ de-sh;Kiel;Bevoelkerung;2021;Pries        ;118;52.0;63;28;-;171;-;54.3979145;10.
 de-sh;Kiel;Bevoelkerung;2021;Friedrichsort   ;74;24.0;15;6;-;34;-;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2021;Neumuehlen/Dietrichsdorf;466;110.0;190;45;-;636;-;;
 de-sh;Kiel;Bevoelkerung;2021;Elmschenhagen;258;155.0;140;25;-;331;-;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2021;Suchsdorf ;27;28.0;18;12;-;22;-;;
+de-sh;Kiel;Bevoelkerung;2021;Suchsdorf ;27;28.0;18;12;-;22;-;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2021;Schilksee  ;7;29.0;3;17;-;12;-;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2021;Mettenhof ;468;397.0;846;191;-;1388;-;;
+de-sh;Kiel;Bevoelkerung;2021;Mettenhof ;468;397.0;846;191;-;1388;-;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2021;Russee    ;42;31.0;22;16;-;28;-;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2021;Meimersdorf  ;41;19.0;4;5;-;1;-;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2021;Moorsee    ;40;6.0;22;3;-;16;-;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2021;Wellsee    ;62;63.0;45;26;-;35;-;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2021;Roenne     ;;;1;;-;;-;;
-de-sh;Kiel;Bevoelkerung;2020;Altstadt        ;5;4.0;8;16;-;3;6;;
+de-sh;Kiel;Bevoelkerung;2020;Altstadt        ;5;4.0;8;16;-;3;6;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2020;Vorstadt      ;10;5.0;4;12;-;16;3;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2020;Exerzierplatz   ;33;30.0;29;14;-;47;14;;
+de-sh;Kiel;Bevoelkerung;2020;Exerzierplatz   ;33;30.0;29;14;-;47;14;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2020;Damperhof  ;11;17.0;9;1;-;43;6;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2020;Brunswik    ;37;22.0;5;11;-;40;1;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2020;Duesternbrook  ;5;6.0;5;7;-;7;2;;
@@ -111,17 +111,17 @@ de-sh;Kiel;Bevoelkerung;2020;Pries        ;115;40.0;63;31;-;164;1;54.3979145;10.
 de-sh;Kiel;Bevoelkerung;2020;Friedrichsort   ;78;25.0;16;8;-;30;-;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2020;Neumuehlen/Dietrichsdorf;460;102.0;189;38;-;639;57;;
 de-sh;Kiel;Bevoelkerung;2020;Elmschenhagen;253;159.0;121;27;-;318;42;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2020;Suchsdorf ;26;35.0;22;11;-;17;10;;
+de-sh;Kiel;Bevoelkerung;2020;Suchsdorf ;26;35.0;22;11;-;17;10;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2020;Schilksee  ;6;38.0;3;19;-;11;;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2020;Mettenhof ;474;417.0;796;201;-;1307;13;;
+de-sh;Kiel;Bevoelkerung;2020;Mettenhof ;474;417.0;796;201;-;1307;13;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2020;Russee    ;43;34.0;21;16;-;30;4;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2020;Meimersdorf  ;39;19.0;4;5;-;1;5;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2020;Moorsee    ;35;6.0;22;3;-;12;7;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2020;Wellsee    ;70;111.0;44;26;-;32;12;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2020;Roenne     ;0;0.0;0;0;-;0;0;;
-de-sh;Kiel;Bevoelkerung;2019;Altstadt        ;3;7.0;9;17;2;1;2;;
+de-sh;Kiel;Bevoelkerung;2019;Altstadt        ;3;7.0;9;17;2;1;2;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2019;Vorstadt      ;12;5.0;3;11;2;13;2;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2019;Exerzierplatz   ;33;30.0;33;15;12;51;15;;
+de-sh;Kiel;Bevoelkerung;2019;Exerzierplatz   ;33;30.0;33;15;12;51;15;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2019;Damperhof  ;11;17.0;11;2;1;38;3;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2019;Brunswik    ;42;21.0;8;11;5;36;1;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2019;Duesternbrook  ;7;6.0;5;5;4;6;3;;
@@ -141,17 +141,17 @@ de-sh;Kiel;Bevoelkerung;2019;Pries        ;115;41.0;66;32;17;141;3;54.3979145;10
 de-sh;Kiel;Bevoelkerung;2019;Friedrichsort   ;79;23.0;15;8;0;25;0;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2019;Neumuehlen/Dietrichsdorf;460;109.0;189;46;28;630;57;;
 de-sh;Kiel;Bevoelkerung;2019;Elmschenhagen;252;156.0;107;29;20;281;39;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2019;Suchsdorf ;25;42.0;24;12;7;20;10;;
+de-sh;Kiel;Bevoelkerung;2019;Suchsdorf ;25;42.0;24;12;7;20;10;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2019;Schilksee  ;8;32.0;3;20;5;11;0;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2019;Mettenhof ;473;384.0;755;202;94;1210;6;;
+de-sh;Kiel;Bevoelkerung;2019;Mettenhof ;473;384.0;755;202;94;1210;6;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2019;Russee    ;41;36.0;16;17;7;36;7;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2019;Meimersdorf  ;35;19.0;4;5;8;3;7;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2019;Moorsee    ;37;6.0;16;3;2;20;4;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2019;Wellsee    ;72;119.0;41;23;6;15;8;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2019;Roenne     ;0;0.0;0;0;0;0;0;;
-de-sh;Kiel;Bevoelkerung;2018;Altstadt        ;2;5.0;10;7;2;1;2;;
+de-sh;Kiel;Bevoelkerung;2018;Altstadt        ;2;5.0;10;7;2;1;2;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2018;Vorstadt      ;12;7.0;3;10;2;15;1;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2018;Exerzierplatz   ;37;32.0;35;12;12;47;18;;
+de-sh;Kiel;Bevoelkerung;2018;Exerzierplatz   ;37;32.0;35;12;12;47;18;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2018;Damperhof  ;14;19.0;11;2;1;45;5;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2018;Brunswik    ;41;19.0;7;10;4;42;7;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2018;Duesternbrook  ;9;7.0;3;6;4;5;1;;
@@ -171,17 +171,17 @@ de-sh;Kiel;Bevoelkerung;2018;Pries        ;119;47.0;59;34;19;127;4;54.3979145;10
 de-sh;Kiel;Bevoelkerung;2018;Friedrichsort   ;81;20.0;10;8;0;25;0;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2018;Neumuehlen/Dietrichsdorf;468;96.0;148;51;26;515;56;;
 de-sh;Kiel;Bevoelkerung;2018;Elmschenhagen;248;146.0;115;26;22;246;31;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2018;Suchsdorf ;24;40.0;25;14;7;18;10;;
+de-sh;Kiel;Bevoelkerung;2018;Suchsdorf ;24;40.0;25;14;7;18;10;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2018;Schilksee  ;9;21.0;4;22;5;24;0;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2018;Mettenhof ;483;404.0;733;210;96;1124;7;;
+de-sh;Kiel;Bevoelkerung;2018;Mettenhof ;483;404.0;733;210;96;1124;7;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2018;Russee    ;36;39.0;18;18;7;38;1;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2018;Meimersdorf  ;31;20.0;6;4;5;1;7;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2018;Moorsee    ;34;10.0;10;3;2;30;1;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2018;Wellsee    ;66;109.0;43;24;6;13;8;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2018;Roenne     ;0;0.0;0;0;0;0;0;;
-de-sh;Kiel;Bevoelkerung;2017;Altstadt        ;3;7.0;6;2;0;1;9;;
+de-sh;Kiel;Bevoelkerung;2017;Altstadt        ;3;7.0;6;2;0;1;9;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2017;Vorstadt      ;14;9.0;8;6;2;13;0;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2017;Exerzierplatz   ;43;39.0;40;11;12;51;21;;
+de-sh;Kiel;Bevoelkerung;2017;Exerzierplatz   ;43;39.0;40;11;12;51;21;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2017;Damperhof  ;12;19.0;5;2;2;40;5;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2017;Brunswik    ;34;34.0;7;13;6;33;4;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2017;Duesternbrook  ;8;15.0;2;11;7;7;0;;
@@ -201,17 +201,17 @@ de-sh;Kiel;Bevoelkerung;2017;Pries        ;123;40.0;35;31;16;121;6;54.3979145;10
 de-sh;Kiel;Bevoelkerung;2017;Friedrichsort   ;80;22.0;9;8;0;20;0;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2017;Neumuehlen/Dietrichsdorf;475;95.0;138;51;25;448;47;;
 de-sh;Kiel;Bevoelkerung;2017;Elmschenhagen;249;140.0;91;22;21;246;34;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2017;Suchsdorf ;25;27.0;27;13;6;15;10;;
+de-sh;Kiel;Bevoelkerung;2017;Suchsdorf ;25;27.0;27;13;6;15;10;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2017;Schilksee  ;8;28.0;6;23;5;26;4;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2017;Mettenhof ;490;438.0;666;217;100;988;8;;
+de-sh;Kiel;Bevoelkerung;2017;Mettenhof ;490;438.0;666;217;100;988;8;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2017;Russee    ;39;34.0;13;14;7;37;1;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2017;Meimersdorf  ;35;21.0;6;5;7;6;4;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2017;Moorsee    ;34;20.0;11;4;2;30;1;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2017;Wellsee    ;61;143.0;38;25;7;8;7;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2017;Roenne     ;0;0.0;0;0;0;0;0;;
-de-sh;Kiel;Bevoelkerung;2016;Altstadt        ;3;9.0;6;3;0;1;13;;
+de-sh;Kiel;Bevoelkerung;2016;Altstadt        ;3;9.0;6;3;0;1;13;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2016;Vorstadt      ;16;8.0;12;7;1;4;0;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2016;Exerzierplatz   ;42;36.0;37;13;11;47;20;;
+de-sh;Kiel;Bevoelkerung;2016;Exerzierplatz   ;42;36.0;37;13;11;47;20;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2016;Damperhof  ;15;22.0;2;3;2;26;8;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2016;Brunswik    ;33;36.0;15;16;7;30;2;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2016;Duesternbrook  ;10;16.0;4;14;7;15;0;;
@@ -231,17 +231,17 @@ de-sh;Kiel;Bevoelkerung;2016;Pries        ;126;48.0;41;32;17;109;10;54.3979145;1
 de-sh;Kiel;Bevoelkerung;2016;Friedrichsort   ;82;26.0;5;6;1;15;0;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2016;Neumuehlen/Dietrichsdorf;484;87.0;92;46;29;305;59;;
 de-sh;Kiel;Bevoelkerung;2016;Elmschenhagen;233;147.0;69;21;18;188;28;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2016;Suchsdorf ;21;79.0;21;11;6;21;9;;
+de-sh;Kiel;Bevoelkerung;2016;Suchsdorf ;21;79.0;21;11;6;21;9;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2016;Schilksee  ;9;28.0;12;20;5;62;1;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2016;Mettenhof ;491;430.0;615;220;103;739;8;;
+de-sh;Kiel;Bevoelkerung;2016;Mettenhof ;491;430.0;615;220;103;739;8;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2016;Russee    ;39;32.0;22;11;7;45;1;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2016;Meimersdorf  ;35;23.0;6;6;6;5;2;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2016;Moorsee    ;33;10.0;7;4;3;28;1;54.264576;10.150361
 de-sh;Kiel;Bevoelkerung;2016;Wellsee    ;55;126.0;33;23;6;4;6;54.2907296;10.1622402
 de-sh;Kiel;Bevoelkerung;2016;Roenne     ;0;1.0;0;0;0;0;0;;
-de-sh;Kiel;Bevoelkerung;2015;Altstadt        ;4;6.0;2;3;-;-;18;;
+de-sh;Kiel;Bevoelkerung;2015;Altstadt        ;4;6.0;2;3;-;-;18;54.3232694;10.1394445
 de-sh;Kiel;Bevoelkerung;2015;Vorstadt      ;15;18.0;26;7;1;29;-;54.3196228;10.1315252
-de-sh;Kiel;Bevoelkerung;2015;Exerzierplatz   ;45;37.0;21;13;10;36;9;;
+de-sh;Kiel;Bevoelkerung;2015;Exerzierplatz   ;45;37.0;21;13;10;36;9;54.3209013;10.1273377
 de-sh;Kiel;Bevoelkerung;2015;Damperhof  ;17;15.0;3;5;2;23;6;54.3265337;10.1336102
 de-sh;Kiel;Bevoelkerung;2015;Brunswik    ;33;36.0;10;16;6;26;5;54.3284802;10.1384443
 de-sh;Kiel;Bevoelkerung;2015;Duesternbrook  ;9;17.0;6;14;6;18;-;;
@@ -261,9 +261,9 @@ de-sh;Kiel;Bevoelkerung;2015;Pries        ;129;60.0;17;28;18;62;1;54.3979145;10.
 de-sh;Kiel;Bevoelkerung;2015;Friedrichsort   ;83;20.0;1;2;1;9;-;54.393077;10.1790173
 de-sh;Kiel;Bevoelkerung;2015;Neumuehlen/Dietrichsdorf;483;83.0;57;49;28;173;45;;
 de-sh;Kiel;Bevoelkerung;2015;Elmschenhagen;241;138.0;67;17;17;93;19;54.2934876;10.184575
-de-sh;Kiel;Bevoelkerung;2015;Suchsdorf ;26;54.0;8;10;5;2;6;;
+de-sh;Kiel;Bevoelkerung;2015;Suchsdorf ;26;54.0;8;10;5;2;6;54.3573804;10.0787571
 de-sh;Kiel;Bevoelkerung;2015;Schilksee  ;9;28.0;1;22;5;-;1;54.4210463;10.1703279
-de-sh;Kiel;Bevoelkerung;2015;Mettenhof ;518;395.0;516;217;106;458;12;;
+de-sh;Kiel;Bevoelkerung;2015;Mettenhof ;518;395.0;516;217;106;458;12;54.3223529;10.0532291
 de-sh;Kiel;Bevoelkerung;2015;Russee    ;37;29.0;21;10;8;34;2;54.3016426;10.0665383
 de-sh;Kiel;Bevoelkerung;2015;Meimersdorf  ;38;20.0;7;6;6;1;1;54.2747652;10.1101233
 de-sh;Kiel;Bevoelkerung;2015;Moorsee    ;27;11.0;7;4;3;27;4;54.264576;10.150361

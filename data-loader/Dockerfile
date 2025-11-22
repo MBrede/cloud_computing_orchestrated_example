@@ -19,6 +19,8 @@ RUN uv pip install -r requirements.txt
 
 # Copy script
 COPY load_kiel_data.py .
+RUN mkdir data
+COPY data/* data/
 
 # Run the data loader
 CMD ["uv", "run", "load_kiel_data.py"]

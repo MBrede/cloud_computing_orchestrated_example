@@ -54,6 +54,7 @@ class BikeStationBase(BaseModel):
     latitude: float = Field(..., ge=-90, le=90, description="Latitude coordinate")
     longitude: float = Field(..., ge=-180, le=180, description="Longitude coordinate")
     bikes_available: int = Field(..., ge=0, description="Number of bikes currently available")
+    cargo_bikes_available: int = Field(..., ge=0, description="Number of cargo bikes currently available")
     capacity: Optional[int] = Field(None, ge=0, description="Total capacity of the station")
 
 
@@ -92,6 +93,7 @@ class Stats(BaseModel):
     total_population: int = Field(..., description="Total population across all districts")
     total_stations: int = Field(..., description="Total bike stations in MongoDB")
     total_bikes_available: int = Field(..., description="Total bikes currently available")
+    total_cargo_bikes_available: int = Field(..., description="Total cargo bikes currently available")
     cache_hit_rate: Optional[float] = Field(None, description="Redis cache hit rate")
 
 

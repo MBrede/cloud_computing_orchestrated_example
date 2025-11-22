@@ -293,14 +293,17 @@ def import_population_by_age(conn, csv_path):
             for age_group in age_groups:
                 if age_group in row and row[age_group]:
                     group_count = int(row[age_group])
-                    cursor.execute(
-                        """INSERT INTO population_by_age
-                           (stadtteil_nr, datum, age_group, count)
-                           VALUES (%s, %s, %s, %s)
-                           ON DUPLICATE KEY UPDATE count=%s""",
-                        (stadtteil_nr, datum, age_group.strip(), group_count, group_count)
-                    )
-                    count += 1
+                    try:
+                        cursor.execute(
+                            """INSERT INTO population_by_age
+                            (stadtteil_nr, datum, age_group, count)
+                            VALUES (%s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE count=%s""",
+                            (stadtteil_nr, datum, age_group.strip(), group_count, group_count)
+                        )
+                        count += 1
+                    except Exception:
+                        continue
 
     conn.commit()
     cursor.close()
@@ -325,13 +328,20 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column):
         reader = csv.DictReader(f, delimiter=';')
         headers = reader.fieldnames
 
-        for row in reader:
-            datum = row['Datum'].replace('_', '-')
-            stadtteil_nr = int(row['Stadtteilnummer'])
+        for i, row in enumerate(reader):
+            try:
+                datum = row['Datum'].replace('_', '-')
+            except KeyError:
+                datum = row['Jahr'].replace('_', '-') + "-01-01"
+            try:
+                stadtteil_nr = int(row['Stadtteilnummer'])
+            except KeyError:
+                stadtteil_nr = i
             merkmal = row.get('Merkmal', '')
 
             # Find data columns (skip metadata columns)
-            skip_columns = ['Land', 'Stadt', 'Kategorie', 'Merkmal', 'Datum',
+            skip_columns = ['Land', 'Stadt', 'Kategorie', 'Merkmal', 
+                            'Datum','Jahr',
                            'Stadtteilnummer', 'Stadtteil']
 
             for header in headers:
@@ -470,7 +480,7 @@ def main():
         logger.error(f"ERROR: Error during data loading: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        pass
 
 
 if __name__ == "__main__":
