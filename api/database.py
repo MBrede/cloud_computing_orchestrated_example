@@ -461,7 +461,7 @@ class RedisCache:
         try:
             if isinstance(value, dict):
                 content = {k:str(v)
-                           for v in value.items()}
+                           for k,v in value.items()}
             elif isinstance(value, list):
                 content = [str(v) for v in value]
             else:
