@@ -433,7 +433,16 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_m
                 jahr_value = row.get('Jahr', '2023')
                 # If Jahr contains underscores/dashes or is longer than 4 chars, it's a full date
                 if '_' in jahr_value or '-' in jahr_value or len(jahr_value) > 4:
-                    datum = jahr_value.replace('_', '-')
+                    # Parse DD-MM-YYYY or DD_MM_YYYY and convert to YYYY-MM-DD for MySQL
+                    date_str = jahr_value.replace('_', '-')
+                    try:
+                        # Try parsing as DD-MM-YYYY
+                        from datetime import datetime
+                        dt = datetime.strptime(date_str, '%d-%m-%Y')
+                        datum = dt.strftime('%Y-%m-%d')
+                    except ValueError:
+                        # If that fails, assume it's already in correct format
+                        datum = date_str
                 else:
                     # It's just a year, append -01-01
                     datum = jahr_value + "-01-01"
