@@ -278,13 +278,14 @@ def get_stadtteil_nr(conn, stadtteil_name):
     return result[0] if result else None
 
 
-def import_population_by_gender(conn, csv_path):
+def import_population_by_gender(conn, csv_path, stadtteile_map):
     """
     Import population by gender data from CSV.
 
     Args:
         conn: mysql.connector connection object
         csv_path: Path to the CSV file
+        stadtteile_map: Dict mapping district names to auto-generated stadtteil_nr
     """
     logger.info(f"Importing population by gender from {csv_path}...")
     cursor = conn.cursor()
@@ -293,8 +294,14 @@ def import_population_by_gender(conn, csv_path):
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter=';')
         for row in reader:
+            # Look up stadtteil_nr by name (ignore Stadtteilnummer from CSV)
+            stadtteil_name = row['Stadtteil'].strip()
+            stadtteil_nr = stadtteile_map.get(stadtteil_name)
+
+            if not stadtteil_nr:
+                continue  # Skip unknown districts
+
             datum = row['Datum'].replace('_', '-')
-            stadtteil_nr = int(row['Stadtteilnummer'])
             total = int(row['insgesamt'])
             male = int(row['maennlich'])
             female = int(row['weiblich'])
@@ -313,13 +320,14 @@ def import_population_by_gender(conn, csv_path):
     logger.info(f">> Imported {count} population by gender records")
 
 
-def import_population_by_age(conn, csv_path):
+def import_population_by_age(conn, csv_path, stadtteile_map):
     """
     Import population by age groups data from CSV.
 
     Args:
         conn: mysql.connector connection object
         csv_path: Path to the CSV file
+        stadtteile_map: Dict mapping district names to auto-generated stadtteil_nr
     """
     logger.info(f"Importing population by age from {csv_path}...")
     cursor = conn.cursor()
@@ -337,8 +345,14 @@ def import_population_by_age(conn, csv_path):
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter=';')
         for row in reader:
+            # Look up stadtteil_nr by name (ignore Stadtteilnummer from CSV)
+            stadtteil_name = row['Stadtteil'].strip()
+            stadtteil_nr = stadtteile_map.get(stadtteil_name)
+
+            if not stadtteil_nr:
+                continue  # Skip unknown districts
+
             datum = row['Datum'].replace('_', '-')
-            stadtteil_nr = int(row['Stadtteilnummer'])
 
             # Insert each age group as a separate row
             for age_group in age_groups:
@@ -490,9 +504,9 @@ def import_all_csv_data(conn):
 
         # Use special handlers for gender and age data (they have different structures)
         if filename == 'kiel_bevoelkerung_stadtteile_einwohner_geschlecht.csv':
-            import_population_by_gender(conn, file_path)
+            import_population_by_gender(conn, file_path, stadtteile_map)
         elif filename == 'kiel_bevoelkerung_altersgruppen_stadtteile.csv':
-            import_population_by_age(conn, file_path)
+            import_population_by_age(conn, file_path, stadtteile_map)
         else:
             import_generic_data(conn, file_path, table_name, column_name, stadtteile_map)
 
