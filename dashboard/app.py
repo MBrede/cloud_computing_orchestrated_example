@@ -147,12 +147,22 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
     Returns:
         folium.Map: Interactive map object
     """
-    # Create base map with OpenStreetMap tiles enabled by default
+    # Create base map with explicit OpenStreetMap tiles
     m = folium.Map(
         location=KIEL_CENTER,
         zoom_start=12,
-        tiles='OpenStreetMap'
+        tiles=None
     )
+
+    # Add OpenStreetMap base layer (not overlay, not in layer control)
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        name='OpenStreetMap',
+        overlay=False,
+        control=False,
+        show=True
+    ).add_to(m)
 
     # Add demographic heatmap if requested
     if heatmap_metric and stadtteile_with_demographics:
