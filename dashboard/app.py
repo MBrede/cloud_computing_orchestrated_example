@@ -147,15 +147,22 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
     Returns:
         folium.Map: Interactive map object
     """
-    # Create base map
+    # Create base map with explicit OpenStreetMap tiles
     m = folium.Map(
         location=KIEL_CENTER,
         zoom_start=12,
         tiles=None
     )
-    
-    folium.TileLayer("OpenStreetMap", overlay=False, control=True, 
-                     show=True).add_to(m)
+
+    # Add OpenStreetMap base layer (not overlay, not in layer control)
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        name='OpenStreetMap',
+        overlay=False,
+        control=False,
+        show=True
+    ).add_to(m)
 
     # Add demographic heatmap if requested
     if heatmap_metric and stadtteile_with_demographics:
@@ -320,8 +327,7 @@ def main():
 
     # Heatmap options
     st.sidebar.subheader("Heatmap Layer")
-    heatmap_enabled = st.sidebar.checkbox("Enable Demographic Heatmap", value=False)
-    heatmap_metric = None
+    heatmap_enabled = st.sidebar.checkbox("Enable Demographic Heatmap", value=True)
 
     if heatmap_enabled:
         heatmap_metric = st.sidebar.selectbox(
@@ -333,6 +339,8 @@ def main():
                 "female_ratio": "Female Ratio (%)"
             }[x]
         )
+    else:
+        heatmap_metric = None
 
     # Bike filters
     if show_bikes:
