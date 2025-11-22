@@ -93,7 +93,7 @@ def create_tables(conn):
     # Create stadtteile (districts) table
     cursor.execute("""
         CREATE TABLE stadtteile (
-            stadtteil_nr INT PRIMARY KEY,
+            stadtteil_nr INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             latitude DOUBLE,
             longitude DOUBLE,
@@ -189,102 +189,75 @@ def create_tables(conn):
 def import_stadtteile_from_all_csvs(conn, data_dir):
     """
     Scan all CSV files to collect unique Stadtteile and insert into stadtteile table.
-    This ensures we have a complete districts table before importing demographic data.
+    Ignores Stadtteilnummer from CSVs and uses auto-incremented IDs instead.
 
     Args:
         conn: mysql.connector connection object
         data_dir: Path to directory containing CSV files
+
+    Returns:
+        dict: Mapping of district name -> auto-generated stadtteil_nr
     """
     cursor = conn.cursor()
-    stadtteile_map = {}  # Map: stadtteil_nr -> (name, lat, lon)
-
-    # First pass: collect all stadtteile with numbers (from files that have Stadtteilnummer)
+    stadtteile_data = {}  # Map: name -> (lat, lon)
     csv_files = list(Path(data_dir).glob('*.csv'))
 
+    # Collect all unique stadtteile names with their coordinates
     for csv_file in csv_files:
         with open(csv_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter=';')
             headers = reader.fieldnames
 
-            # Check if this CSV has Stadtteilnummer
-            if 'Stadtteilnummer' in headers:
-                for row in reader:
-                    stadtteil_nr = int(row['Stadtteilnummer'])
-                    stadtteil_name = row['Stadtteil'].strip()
-                    lat = row.get('lat', '').strip()
-                    lon = row.get('lon', '').strip()
-
-                    # Convert coordinates to float or None
-                    try:
-                        latitude = float(lat) if lat else None
-                        longitude = float(lon) if lon else None
-                    except (ValueError, TypeError):
-                        latitude = None
-                        longitude = None
-
-                    stadtteile_map[stadtteil_nr] = (stadtteil_name, latitude, longitude)
-
-    # Second pass: collect stadtteile without numbers (from files that only have Stadtteil name)
-    # We'll need to create a name-to-number mapping
-    stadtteile_by_name = {name: nr for nr, (name, _, _) in stadtteile_map.items()}
-    next_nr = max(stadtteile_map.keys()) + 1 if stadtteile_map else 1
-
-    for csv_file in csv_files:
-        with open(csv_file, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f, delimiter=';')
-            headers = reader.fieldnames
-
-            # Check if this CSV has Stadtteil but NOT Stadtteilnummer
+            # Find district name column (ignore Stadtteilnummer completely)
             stadtteil_col = None
-            if 'Stadtteil' in headers and 'Stadtteilnummer' not in headers:
+            if 'Stadtteil' in headers:
                 stadtteil_col = 'Stadtteil'
             elif 'Stadtteile' in headers:
                 stadtteil_col = 'Stadtteile'
 
-            if stadtteil_col:
-                for row in reader:
-                    stadtteil_name = row[stadtteil_col].strip()
+            if not stadtteil_col:
+                continue
 
-                    # Skip if already in map
-                    if stadtteil_name in stadtteile_by_name:
-                        continue
+            for row in reader:
+                stadtteil_name = row[stadtteil_col].strip()
+                if not stadtteil_name:
+                    continue
 
-                    # Get coordinates
-                    lat = row.get('lat', '').strip()
-                    lon = row.get('lon', '').strip()
+                # Get coordinates (might be in this file or already collected)
+                lat = row.get('lat', '').strip()
+                lon = row.get('lon', '').strip()
 
-                    try:
-                        latitude = float(lat) if lat else None
-                        longitude = float(lon) if lon else None
-                    except (ValueError, TypeError):
-                        latitude = None
-                        longitude = None
+                try:
+                    latitude = float(lat) if lat else None
+                    longitude = float(lon) if lon else None
+                except (ValueError, TypeError):
+                    latitude = None
+                    longitude = None
 
-                    # Assign a new number
-                    stadtteile_map[next_nr] = (stadtteil_name, latitude, longitude)
-                    stadtteile_by_name[stadtteil_name] = next_nr
-                    next_nr += 1
+                # Update coordinates if we find them (some CSVs have them, some don't)
+                if stadtteil_name not in stadtteile_data:
+                    stadtteile_data[stadtteil_name] = (latitude, longitude)
+                elif latitude is not None and longitude is not None:
+                    # Update if we found coordinates in this CSV
+                    stadtteile_data[stadtteil_name] = (latitude, longitude)
 
-    # Insert all stadtteile into the database
-    for nr, (name, lat, lon) in sorted(stadtteile_map.items()):
+    # Insert all stadtteile into database (auto-increment will assign IDs)
+    for name, (lat, lon) in sorted(stadtteile_data.items()):
         cursor.execute(
-            "INSERT IGNORE INTO stadtteile (stadtteil_nr, name, latitude, longitude) VALUES (%s, %s, %s, %s)",
-            (nr, name, lat, lon)
+            "INSERT IGNORE INTO stadtteile (name, latitude, longitude) VALUES (%s, %s, %s)",
+            (name, lat, lon)
         )
 
     conn.commit()
-    cursor.close()
-    logger.info(f">> Inserted {len(stadtteile_map)} Stadtteile with coordinates")
 
-    # Query database to get actual list of valid stadtteil numbers
-    # (some might have been skipped during insert due to missing data)
-    cursor = conn.cursor()
-    cursor.execute("SELECT stadtteil_nr FROM stadtteile")
-    valid_stadtteile_nrs = set(row[0] for row in cursor.fetchall())
-    cursor.close()
+    # Query database to get the auto-generated IDs
+    cursor.execute("SELECT name, stadtteil_nr FROM stadtteile")
+    stadtteile_by_name = {row[0]: row[1] for row in cursor.fetchall()}
 
-    # Return both name-to-number mapping and set of valid numbers for validation
-    return stadtteile_by_name, valid_stadtteile_nrs
+    cursor.close()
+    logger.info(f">> Inserted {len(stadtteile_by_name)} Stadtteile with auto-incremented IDs")
+
+    return stadtteile_by_name
 
 
 def get_stadtteil_nr(conn, stadtteil_name):
@@ -388,18 +361,17 @@ def import_population_by_age(conn, csv_path):
     logger.info(f">> Imported {count} population by age records")
 
 
-def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_map, valid_stadtteile_nrs):
+def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_map):
     """
     Generic importer for CSV files with similar structure.
-    Handles CSVs with or without Stadtteilnummer by looking up district names.
+    Always uses district names to look up stadtteil_nr (ignores Stadtteilnummer from CSV).
 
     Args:
         conn: mysql.connector connection object
         csv_path: Path to the CSV file
         table_name: Target table name
         merkmal_column: Name of the column containing the category/type
-        stadtteile_map: Dict mapping district names to numbers
-        valid_stadtteile_nrs: Set of valid stadtteil numbers for validation
+        stadtteile_map: Dict mapping district names to auto-generated stadtteil_nr
     """
     logger.info(f"Importing data from {Path(csv_path).name} into {table_name}...")
     cursor = conn.cursor()
@@ -409,34 +381,29 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_m
         reader = csv.DictReader(f, delimiter=';')
         headers = reader.fieldnames
 
-        # Detect stadtteil column
+        # Find district name column (ignore Stadtteilnummer completely)
         stadtteil_col = None
-        has_number = False
-        if 'Stadtteilnummer' in headers:
-            has_number = True
-        elif 'Stadtteil' in headers:
+        if 'Stadtteil' in headers:
             stadtteil_col = 'Stadtteil'
         elif 'Stadtteile' in headers:
             stadtteil_col = 'Stadtteile'
+
+        if not stadtteil_col:
+            logger.warning(f"No district name column found in {Path(csv_path).name}")
+            cursor.close()
+            return
 
         # Skip metadata columns
         skip_columns = {'Land', 'Stadt', 'Kategorie', 'Merkmal', 'Datum', 'Jahr',
                        'Stadtteilnummer', 'Stadtteil', 'Stadtteile', 'lat', 'lon'}
 
         for row in reader:
-            # Get stadtteil_nr
-            if has_number:
-                stadtteil_nr = int(row['Stadtteilnummer'])
-                # Validate that this stadtteil_nr exists in stadtteile table
-                if stadtteil_nr not in valid_stadtteile_nrs:
-                    continue  # Skip if district doesn't exist
-            elif stadtteil_col:
-                stadtteil_name = row[stadtteil_col].strip()
-                stadtteil_nr = stadtteile_map.get(stadtteil_name)
-                if not stadtteil_nr:
-                    continue  # Skip unknown districts
-            else:
-                continue  # No district info, skip
+            # Get stadtteil_nr by name lookup (ignore Stadtteilnummer from CSV)
+            stadtteil_name = row[stadtteil_col].strip()
+            stadtteil_nr = stadtteile_map.get(stadtteil_name)
+
+            if not stadtteil_nr:
+                continue  # Skip unknown districts
 
             # Get date
             try:
@@ -497,9 +464,9 @@ def import_all_csv_data(conn):
         logger.error("No data directory found!")
         return
 
-    # STEP 1: Build complete stadtteile table from all CSVs
+    # STEP 1: Build complete stadtteile table from all CSVs (with auto-incremented IDs)
     logger.info("==> Building complete stadtteile table from all CSVs")
-    stadtteile_map, valid_stadtteile_nrs = import_stadtteile_from_all_csvs(conn, data_dir)
+    stadtteile_map = import_stadtteile_from_all_csvs(conn, data_dir)
 
     # STEP 2: Import demographic data using the stadtteile mapping
     csv_configs = [
@@ -527,7 +494,7 @@ def import_all_csv_data(conn):
         elif filename == 'kiel_bevoelkerung_altersgruppen_stadtteile.csv':
             import_population_by_age(conn, file_path)
         else:
-            import_generic_data(conn, file_path, table_name, column_name, stadtteile_map, valid_stadtteile_nrs)
+            import_generic_data(conn, file_path, table_name, column_name, stadtteile_map)
 
 
 def verify_data(conn):
