@@ -47,7 +47,7 @@ def wait_for_mysql(max_retries=30):
                 user=os.getenv('MYSQL_USER', 'kiel_user'),
                 password=os.getenv('MYSQL_PASSWORD', 'kiel_secure_password_2024')
             )
-            logger.info("✓ MySQL is ready!")
+            logger.info(">> MySQL is ready!")
             return conn
         except MySQLError as e:
             logger.warning(f"Attempt {attempt + 1}/{max_retries}: MySQL not ready yet... ({e})")
@@ -183,7 +183,7 @@ def create_tables(conn):
     conn.commit()
     cursor.close()
 
-    logger.info("✓ Tables created successfully")
+    logger.info(">> Tables created successfully")
 
 
 def import_stadtteile_from_csv(conn, csv_path):
@@ -213,7 +213,7 @@ def import_stadtteile_from_csv(conn, csv_path):
 
     conn.commit()
     cursor.close()
-    logger.info(f"✓ Inserted {len(stadtteile)} Stadtteile")
+    logger.info(f">> Inserted {len(stadtteile)} Stadtteile")
 
 
 def import_population_by_gender(conn, csv_path):
@@ -248,7 +248,7 @@ def import_population_by_gender(conn, csv_path):
 
     conn.commit()
     cursor.close()
-    logger.info(f"✓ Imported {count} population by gender records")
+    logger.info(f">> Imported {count} population by gender records")
 
 
 def import_population_by_age(conn, csv_path):
@@ -293,7 +293,7 @@ def import_population_by_age(conn, csv_path):
 
     conn.commit()
     cursor.close()
-    logger.info(f"✓ Imported {count} population by age records")
+    logger.info(f">> Imported {count} population by age records")
 
 
 def import_generic_data(conn, csv_path, table_name, merkmal_column):
@@ -341,7 +341,7 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column):
 
     conn.commit()
     cursor.close()
-    logger.info(f"✓ Imported {count} records into {table_name}")
+    logger.info(f">> Imported {count} records into {table_name}")
 
 
 def import_all_csv_data(conn):
@@ -417,7 +417,7 @@ def verify_data(conn):
     for table in tables:
         cursor.execute(f"SELECT COUNT(*) FROM {table}")
         count = cursor.fetchone()[0]
-        logger.info(f"✓ {table}: {count} records")
+        logger.info(f">> {table}: {count} records")
 
     # Show sample Stadtteile
     cursor.execute("SELECT stadtteil_nr, name FROM stadtteile ORDER BY stadtteil_nr LIMIT 5")
@@ -452,11 +452,11 @@ def main():
         conn.close()
 
         logger.info("=" * 60)
-        logger.info("✓ Data loading completed successfully!")
+        logger.info(">> Data loading completed successfully!")
         logger.info("=" * 60)
 
     except Exception as e:
-        logger.error(f"✗ Error during data loading: {e}")
+        logger.error(f"ERROR: Error during data loading: {e}")
         import traceback
         traceback.print_exc()
         raise

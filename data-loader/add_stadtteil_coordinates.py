@@ -82,10 +82,10 @@ def connect_to_mysql():
             user=os.getenv('MYSQL_USER', 'kiel_user'),
             password=os.getenv('MYSQL_PASSWORD', 'kiel_secure_password_2024')
         )
-        logger.info("✓ Connected to MySQL")
+        logger.info(">> Connected to MySQL")
         return conn
     except MySQLError as e:
-        logger.error(f"✗ Failed to connect to MySQL: {e}")
+        logger.error(f"ERROR: Failed to connect to MySQL: {e}")
         raise
 
 
@@ -119,17 +119,17 @@ def update_coordinates(conn):
                 (lat, lng, stadtteil_nr)
             )
             updated_count += 1
-            logger.info(f"  ✓ Updated {stadtteil_nr}: {name} ({lat}, {lng})")
+            logger.info(f"  >> Updated {stadtteil_nr}: {name} ({lat}, {lng})")
         else:
             missing_count += 1
-            logger.warning(f"  ⚠ No coordinates found for {stadtteil_nr}: {name}")
+            logger.warning(f"  WARNING: No coordinates found for {stadtteil_nr}: {name}")
 
     conn.commit()
     cursor.close()
 
-    logger.info(f"✓ Updated {updated_count} Stadtteile with coordinates")
+    logger.info(f">> Updated {updated_count} Stadtteile with coordinates")
     if missing_count > 0:
-        logger.warning(f"⚠ {missing_count} Stadtteile are missing coordinates")
+        logger.warning(f"WARNING: {missing_count} Stadtteile are missing coordinates")
 
 
 def verify_coordinates(conn):
@@ -151,7 +151,7 @@ def verify_coordinates(conn):
     """)
 
     with_coords = cursor.fetchall()
-    logger.info(f"✓ {len(with_coords)} Stadtteile have coordinates")
+    logger.info(f">> {len(with_coords)} Stadtteile have coordinates")
 
     # Show first 5 as sample
     logger.info("Sample Stadtteile with coordinates:")
@@ -168,7 +168,7 @@ def verify_coordinates(conn):
 
     without_coords = cursor.fetchall()
     if without_coords:
-        logger.warning(f"⚠ {len(without_coords)} Stadtteile still missing coordinates:")
+        logger.warning(f"WARNING: {len(without_coords)} Stadtteile still missing coordinates:")
         for row in without_coords:
             logger.warning(f"  {row[0]}: {row[1]}")
 
@@ -203,7 +203,7 @@ def export_to_csv(conn, output_file='stadtteile_with_coordinates.csv'):
         writer.writerows(rows)
 
     cursor.close()
-    logger.info(f"✓ Exported {len(rows)} Stadtteile to {output_file}")
+    logger.info(f">> Exported {len(rows)} Stadtteile to {output_file}")
 
 
 def main():
@@ -235,11 +235,11 @@ def main():
         conn.close()
 
         logger.info("=" * 70)
-        logger.info("✓ Coordinate mapping completed successfully!")
+        logger.info(">> Coordinate mapping completed successfully!")
         logger.info("=" * 70)
 
     except Exception as e:
-        logger.error(f"✗ Error during coordinate mapping: {e}")
+        logger.error(f"ERROR: Error during coordinate mapping: {e}")
         import traceback
         traceback.print_exc()
         raise
