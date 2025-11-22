@@ -49,8 +49,8 @@ docker-compose up -d --build api
 
 ### Execute Commands in Containers
 ```bash
-# PostgreSQL
-docker-compose exec postgres psql -U kiel_user -d kiel_data
+# MySQL
+docker-compose exec mysql mysql -u kiel_user -pkiel_secure_password_2024 kiel_data
 
 # MongoDB
 docker-compose exec mongodb mongosh -u bike_user -p bike_secure_password_2024 --authenticationDatabase admin bike_sharing
@@ -76,7 +76,7 @@ curl http://localhost:8000/health
 
 ## API Endpoints Quick Reference
 
-### City Data (PostgreSQL)
+### City Data (MySQL)
 ```bash
 # List all POIs
 GET /api/city/pois
@@ -152,7 +152,7 @@ curl "http://localhost:8000/api/bikes/stations?min_bikes=3"
 ├── dashboard/          # Streamlit dashboard
 │   ├── app.py
 │   └── Dockerfile
-├── data-loader/        # PostgreSQL init
+├── data-loader/        # MySQL init
 │   ├── load_kiel_data.py
 │   └── Dockerfile
 ├── cron-job/          # Bike data sync
@@ -169,11 +169,11 @@ curl "http://localhost:8000/api/bikes/stations?min_bikes=3"
 Located in `.env` file:
 
 ```bash
-# PostgreSQL
-POSTGRES_HOST=postgres
-POSTGRES_DB=kiel_data
-POSTGRES_USER=kiel_user
-POSTGRES_PASSWORD=kiel_secure_password_2024
+# MySQL
+MYSQL_HOST=mysql
+MYSQL_DB=kiel_data
+MYSQL_USER=kiel_user
+MYSQL_PASSWORD=kiel_secure_password_2024
 
 # MongoDB
 MONGO_HOST=mongodb
@@ -198,13 +198,13 @@ REDIS_PASSWORD=redis_secure_password_2024
 
 ## Database Schemas
 
-### PostgreSQL - points_of_interest
+### MySQL - points_of_interest
 ```sql
-id          SERIAL PRIMARY KEY
+id          INT AUTO_INCREMENT PRIMARY KEY
 name        VARCHAR(200)
 type        VARCHAR(50)
-latitude    DOUBLE PRECISION
-longitude   DOUBLE PRECISION
+latitude    DOUBLE
+longitude   DOUBLE
 description TEXT
 ```
 
@@ -232,7 +232,7 @@ description TEXT
 - ✅ GET endpoint (list POIs, list stations, search)
 - ✅ Swagger docs (/docs)
 - ✅ Code documentation (docstrings)
-- ✅ Database (PostgreSQL, MongoDB, Redis)
+- ✅ Database (MySQL, MongoDB, Redis)
 - ✅ Dashboard (Streamlit visualization)
 - ✅ Docker Compose (6 containers)
 
@@ -254,7 +254,7 @@ description TEXT
 
 ## Key Learning Points to Mention
 
-- ✅ PostgreSQL SDK (psycopg2): Connection pooling, parameterized queries
+- ✅ MySQL SDK (mysql-connector-python): Connection pooling, parameterized queries
 - ✅ MongoDB SDK (pymongo): Upsert operations, aggregation
 - ✅ Redis caching: TTL strategy, cache invalidation
 - ✅ Docker orchestration: Health checks, dependencies

@@ -34,8 +34,8 @@ The Kiel City Data Platform is a microservices-based application demonstrating c
                        │                      │                      │
                        ▼                      ▼                      ▼
             ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-            │   PostgreSQL     │   │   MongoDB        │   │   Redis          │
-            │   Port 5432      │   │   Port 27017     │   │   Port 6379      │
+            │   MySQL          │   │   MongoDB        │   │   Redis          │
+            │   Port 3306      │   │   Port 27017     │   │   Port 6379      │
             │   - POI Data     │   │   - Bike Data    │   │   - Caching      │
             │   - Structured   │   │   - Time-Series  │   │   - Session Mgmt │
             └──────────────────┘   └────────┬─────────┘   └──────────────────┘
@@ -81,10 +81,10 @@ The Kiel City Data Platform is a microservices-based application demonstrating c
 
 ### 3. Data Layer
 
-#### PostgreSQL (postgres)
+#### MySQL (mysql)
 - **Purpose**: Relational database for structured city data
 - **Use Case**: Static or slowly-changing data (POIs)
-- **SDK**: psycopg2 with connection pooling
+- **SDK**: mysql-connector-python with connection pooling
 - **Schema**:
   ```sql
   CREATE TABLE points_of_interest (
@@ -169,13 +169,14 @@ DonkeyRepublic API → Cron Job (every 5 min)
 
 ## Database SDK Examples
 
-### PostgreSQL (psycopg2)
+### MySQL (mysql-connector-python)
 
 **Connection Pooling:**
 ```python
-pool = psycopg2.pool.SimpleConnectionPool(
-    minconn=1, maxconn=10,
-    host='postgres', database='kiel_data',
+pool = mysql.connector.pooling.MySQLConnectionPool(
+    pool_name='kiel_pool',
+    pool_size=10,
+    host='mysql', database='kiel_data',
     user='kiel_user', password='***'
 )
 ```
@@ -273,7 +274,7 @@ All services run in a custom Docker bridge network (`kiel-network`):
 ## Monitoring and Health Checks
 
 Each service has health checks:
-- **PostgreSQL**: `pg_isready`
+- **MySQL**: `mysqladmin ping`
 - **MongoDB**: `mongosh ping`
 - **Redis**: `redis-cli ping`
 - **API**: HTTP GET `/health`
@@ -281,7 +282,7 @@ Each service has health checks:
 Docker Compose dependency management:
 ```yaml
 depends_on:
-  postgres:
+  mysql:
     condition: service_healthy  # Wait for health check
   data-loader:
     condition: service_completed_successfully  # Wait for exit
@@ -312,17 +313,17 @@ depends_on:
    - Cache invalidation on writes
 
 2. **Database Indexes**:
-   - PostgreSQL: Indexes on `type` and `name`
+   - MySQL: Indexes on `type` and `name`
    - MongoDB: Indexes on `station_id`, `last_updated`, geospatial
 
 3. **Connection Pooling**:
-   - PostgreSQL pool: 1-10 connections
+   - MySQL pool: 1-10 connections
    - Reuse connections instead of creating new ones
 
 ## Learning Objectives Demonstrated
 
-✅ RESTful API design with FastAPI  
-✅ SQL database operations (psycopg2)  
+✅ RESTful API design with FastAPI
+✅ SQL database operations (mysql-connector-python)
 ✅ NoSQL database operations (pymongo)  
 ✅ Caching with Redis  
 ✅ Docker containerization  

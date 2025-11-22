@@ -9,7 +9,7 @@ This project is a **comprehensive cloud computing orchestration example** design
 ### 1. Full-Stack Application
 - **Backend**: FastAPI REST API with automatic Swagger documentation
 - **Frontend**: Streamlit dashboard with interactive map visualization
-- **Databases**: PostgreSQL (relational), MongoDB (NoSQL), Redis (cache)
+- **Databases**: MySQL (relational), MongoDB (NoSQL), Redis (cache)
 - **Workers**: Data loader (init), Cron job (scheduled sync)
 
 ### 2. Complete Documentation
@@ -23,7 +23,7 @@ This project is a **comprehensive cloud computing orchestration example** design
 ### 3. Educational Value
 
 This project is designed to teach:
-- **Database SDKs**: psycopg2 (PostgreSQL), pymongo (MongoDB), redis-py
+- **Database SDKs**: mysql-connector-python (MySQL), pymongo (MongoDB), redis-py
 - **API Development**: RESTful design, validation, documentation
 - **Containerization**: Docker, Docker Compose, multi-container orchestration
 - **Caching Strategies**: Redis integration, TTL management
@@ -35,7 +35,7 @@ This project is designed to teach:
 User
  ├─> Dashboard (Streamlit) :8501
  └─> API (FastAPI) :8000
-      ├─> PostgreSQL (City POIs)
+      ├─> MySQL (City POIs)
       ├─> MongoDB (Bike Data)
       └─> Redis (Cache)
 
@@ -70,7 +70,7 @@ Background:
 |----------|-----------|---------|
 | API Framework | FastAPI | Modern, fast, auto-documented REST API |
 | Validation | Pydantic | Request/response validation, type safety |
-| SQL Database | PostgreSQL | Structured city data (POIs) |
+| SQL Database | MySQL | Structured city data (POIs) |
 | NoSQL Database | MongoDB | Time-series bike sharing data |
 | Cache | Redis | Performance optimization |
 | Dashboard | Streamlit | Interactive data visualization |
@@ -108,7 +108,7 @@ cloud_computing_orchestrated_example/
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── data-loader/
-│   ├── load_kiel_data.py    # PostgreSQL initialization (200+ lines)
+│   ├── load_kiel_data.py    # MySQL initialization (200+ lines)
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── cron-job/
@@ -201,7 +201,7 @@ This project demonstrates how to:
 - Health checks ensure reliable startup order
 
 ### Design Decisions
-- **PostgreSQL for POIs**: Static data with relational structure
+- **MySQL for POIs**: Static data with relational structure
 - **MongoDB for bikes**: Dynamic, frequently-changing time-series data
 - **Redis for caching**: Reduce database load, improve response times
 - **Separate services**: Each component has single responsibility

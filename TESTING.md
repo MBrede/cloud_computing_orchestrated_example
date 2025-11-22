@@ -7,7 +7,7 @@ This guide helps you test the Kiel City Data Platform to ensure everything works
 - Docker installed and running
 - Docker Compose installed
 - At least 4GB of free RAM
-- Ports 8000, 8501, 5432, 27017, 6379 available
+- Ports 8000, 8501, 3306, 27017, 6379 available
 
 ## Quick Test
 
@@ -39,7 +39,7 @@ docker-compose down
 docker-compose ps
 
 # Expected output: 6 containers
-# - kiel-postgres (healthy)
+# - kiel-mysql (healthy)
 # - kiel-mongodb (healthy)
 # - kiel-redis (healthy)
 # - kiel-api (healthy)
@@ -50,13 +50,13 @@ docker-compose ps
 
 ### 2. Database Initialization
 
-**PostgreSQL:**
+**MySQL:**
 ```bash
-# Check PostgreSQL logs
+# Check MySQL logs
 docker-compose logs data-loader
 
 # Should see:
-# ✓ PostgreSQL is ready!
+# ✓ MySQL is ready!
 # ✓ Table created successfully
 # ✓ Inserted 30 Points of Interest
 # ✓ Data loading completed successfully!
@@ -192,10 +192,10 @@ docker-compose exec cron-job python /app/fetch_bikes.py
 
 ### 7. Database SDK Testing
 
-**PostgreSQL Connection:**
+**MySQL Connection:**
 ```bash
-# Connect to PostgreSQL
-docker-compose exec postgres psql -U kiel_user -d kiel_data
+# Connect to MySQL
+docker-compose exec mysql mysql -u kiel_user -p kiel_data
 
 # Run queries
 SELECT COUNT(*) FROM points_of_interest;
@@ -228,8 +228,8 @@ exit
 
 ## Expected Results Summary
 
-✅ **All containers running** (postgres, mongodb, redis, api, dashboard, cron-job)  
-✅ **Data loader completed successfully** (30 POIs in PostgreSQL)  
+✅ **All containers running** (mysql, mongodb, redis, api, dashboard, cron-job)  
+✅ **Data loader completed successfully** (30 POIs in MySQL)  
 ✅ **Bike data fetched** (stations in MongoDB)  
 ✅ **API responding** (200 OK for GET, 201 Created for POST)  
 ✅ **Dashboard loads** (map with markers visible)  
@@ -259,11 +259,11 @@ docker-compose down
 docker-compose ps
 
 # View database logs
-docker-compose logs postgres
+docker-compose logs mysql
 docker-compose logs mongodb
 
 # Restart services
-docker-compose restart postgres
+docker-compose restart mysql
 docker-compose restart api
 ```
 
@@ -319,7 +319,7 @@ docker stats
 
 **Resource usage:**
 - Total memory: ~1.5-2GB
-- PostgreSQL: ~50MB
+- MySQL: ~50MB
 - MongoDB: ~100MB
 - Redis: ~10MB
 - API: ~100MB

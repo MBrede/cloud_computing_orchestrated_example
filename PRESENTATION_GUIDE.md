@@ -13,7 +13,7 @@ This guide helps you prepare a strong presentation for the Cloud Computing proje
 ### 1. Introduction (2 minutes)
 - **Project Title**: "Kiel City Data Platform"
 - **Goal**: Demonstrate cloud computing orchestration with multiple databases
-- **Key Technologies**: Docker Compose, FastAPI, PostgreSQL, MongoDB, Redis
+- **Key Technologies**: Docker Compose, FastAPI, MySQL, MongoDB, Redis
 
 ### 2. System Architecture (3-4 minutes)
 
@@ -22,7 +22,7 @@ This guide helps you prepare a strong presentation for the Cloud Computing proje
 Explain the layers:
 1. **Frontend**: Streamlit dashboard (port 8501)
 2. **API**: FastAPI backend (port 8000)
-3. **Databases**: PostgreSQL, MongoDB, Redis
+3. **Databases**: MySQL, MongoDB, Redis
 4. **Workers**: Data loader, Cron job
 
 **Key Points to Emphasize**:
@@ -69,12 +69,15 @@ docker-compose up --build
 
 #### Show Database SDK Examples
 
-**PostgreSQL (api/database.py)**:
+**MySQL (api/database.py)**:
 ```python
 # Show connection pooling
-pool = psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=10, ...)
+conn = mysql.connector.connect(
+    host='mysql', database='kiel_data',
+    user='kiel_user', password='...'
+)
 
-# Show parameterized query (防止 SQL injection)
+# Show parameterized query (prevents SQL injection)
 cursor.execute("SELECT * FROM pois WHERE type = %s", (poi_type,))
 ```
 
@@ -96,7 +99,7 @@ if cached:
     return cached
 
 # Query database and cache result
-data = postgres_db.execute_query(query)
+data = mysql_db.execute_query(query)
 redis_cache.set(cache_key, data, ttl=300)
 ```
 
@@ -114,7 +117,7 @@ Show a slide or speak through how your project meets requirements:
 - ✅ FastAPI with GET endpoints (list POIs, list stations, search)
 - ✅ Swagger documentation at /docs
 - ✅ Code documentation (docstrings everywhere)
-- ✅ Multiple databases (PostgreSQL, MongoDB, Redis)
+- ✅ Multiple databases (MySQL, MongoDB, Redis)
 - ✅ Dashboard visualization (Streamlit)
 - ✅ Docker Compose deployment (6 containers)
 
@@ -144,7 +147,7 @@ Show a slide or speak through how your project meets requirements:
 ## Anticipated Questions & Answers
 
 ### Q1: "Why did you choose MongoDB for bike data?"
-**Answer**: Bike availability is time-series data that changes frequently. MongoDB's flexible schema allows us to easily store snapshots with varying fields. We can also leverage MongoDB's aggregation framework for historical analysis. PostgreSQL would work too, but MongoDB is more natural for this use case.
+**Answer**: Bike availability is time-series data that changes frequently. MongoDB's flexible schema allows us to easily store snapshots with varying fields. We can also leverage MongoDB's aggregation framework for historical analysis. MySQL would work too, but MongoDB is more natural for this use case.
 
 ### Q2: "How does the caching strategy improve performance?"
 **Answer**: Redis caches frequently-accessed data in memory. POIs rarely change, so we cache them for 5 minutes. Bike data changes every 5 minutes (cron job), so we cache for 1 minute. This reduces database load by 60-90% for repeated requests. We invalidate cache on writes to ensure data freshness.
@@ -161,9 +164,9 @@ Show a slide or speak through how your project meets requirements:
 5. Add authentication and rate limiting
 6. Set up monitoring (Prometheus, Grafana)
 
-### Q5: "Why use both PostgreSQL and MongoDB? Why not just one?"
+### Q5: "Why use both MySQL and MongoDB? Why not just one?"
 **Answer**: This demonstrates understanding of different database paradigms:
-- PostgreSQL for structured, relational data with enforced schema
+- MySQL for structured, relational data with enforced schema
 - MongoDB for flexible, rapidly-changing data
 - Each database is optimized for its use case
 In a real project, you'd choose based on requirements, but this example shows proficiency with both.
