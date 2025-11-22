@@ -169,10 +169,24 @@ curl http://localhost:8000/api/bikes/stations
 
 ### MySQL - City Data
 
-**Schema**: Structured relational data
-- Table: `points_of_interest`
-- Columns: id, name, type, latitude, longitude, description
-- Use case: Static city infrastructure data
+**Data Source**: [Kiel Open Data Portal](https://www.kiel.de/de/kiel_zukunft/statistik_kieler_zahlen/open_data/index.php)
+
+The system uses official demographic and statistical data from the City of Kiel's Open Data initiative, including:
+- Population by district (Stadtteile) and gender
+- Age group distributions
+- Religious affiliations
+- Family status statistics
+- Foreign residents by nationality
+- Household types and sizes
+
+**Schema**: Structured relational data with multiple tables:
+- `stadtteile`: District information with lat/lng coordinates
+- `population_by_gender`: Population counts by gender per district
+- `population_by_age`: Age group distributions
+- `population_by_religion`: Religious affiliation data
+- `population_by_family_status`: Marital status statistics
+- `foreigners_by_nationality`: Foreign residents data
+- `households`: Household statistics
 
 **SDK Example**: `mysql-connector-python` with connection pooling
 
