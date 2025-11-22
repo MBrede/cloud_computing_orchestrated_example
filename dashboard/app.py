@@ -189,10 +189,12 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
                     metric_values.append(value)
 
         if heatmap_data:
+            # Create heatmap feature group (makes it controllable via LayerControl)
+            heatmap_group = folium.FeatureGroup(name='Demographic Heatmap', show=True)
+
             # Create heatmap layer
             plugins.HeatMap(
                 heatmap_data,
-                name='Demographic Heatmap',
                 min_opacity=0.4,
                 max_opacity=0.8,
                 radius=25,
@@ -203,11 +205,13 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
                     0.75: 'orange',
                     1.0: 'red'
                 }
-            ).add_to(m)
+            ).add_to(heatmap_group)
+
+            heatmap_group.add_to(m)
 
     # Add Stadtteile markers
     if show_stadtteile and stadtteile_with_demographics:
-        stadtteil_group = folium.FeatureGroup(name='Stadtteile (Districts)')
+        stadtteil_group = folium.FeatureGroup(name='Stadtteile (Districts)', show=True)
 
         for district in stadtteile_with_demographics:
             if district.get('latitude') and district.get('longitude'):
@@ -246,7 +250,7 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
 
     # Add bike stations
     if show_bikes and bike_stations:
-        bike_group = folium.FeatureGroup(name='Bike Stations')
+        bike_group = folium.FeatureGroup(name='Bike Stations', show=True)
 
         for station in bike_stations:
             bikes = station.get('bikes_available', 0)
