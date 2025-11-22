@@ -132,14 +132,16 @@ def fetch_health():
         return {"status": "error", "mysql": False, "mongodb": False, "redis": False}
 
 
-def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True, show_bikes=True,
+@st.cache_resource
+def create_map(_stadtteile_with_demographics, _bike_stations, show_stadtteile=True, show_bikes=True,
                heatmap_metric=None):
     """
     Create an interactive Folium map with Stadtteile and bike stations.
+    Cached to prevent unnecessary reloads when other app elements change.
 
     Args:
-        stadtteile_with_demographics: List of districts with demographic data
-        bike_stations: List of bike station data
+        _stadtteile_with_demographics: List of districts with demographic data (unhashed)
+        _bike_stations: List of bike station data (unhashed)
         show_stadtteile: Whether to show district markers
         show_bikes: Whether to show bike stations
         heatmap_metric: Metric to use for heatmap ('population', 'density', 'age_avg', etc.)
@@ -164,12 +166,12 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
     ).add_to(m)
 
     # Add demographic heatmap if requested
-    if heatmap_metric and stadtteile_with_demographics:
+    if heatmap_metric and _stadtteile_with_demographics:
         # Prepare data for heatmap
         heatmap_data = []
         metric_values = []
 
-        for district in stadtteile_with_demographics:
+        for district in _stadtteile_with_demographics:
             if district.get('latitude') and district.get('longitude'):
                 value = 0
 
@@ -213,7 +215,7 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
     if show_stadtteile and stadtteile_with_demographics:
         stadtteil_group = folium.FeatureGroup(name='Stadtteile (Districts)', show=True)
 
-        for district in stadtteile_with_demographics:
+        for district in _stadtteile_with_demographics:
             if district.get('latitude') and district.get('longitude'):
                 # Create popup content
                 popup_html = f"""
@@ -249,10 +251,10 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
         stadtteil_group.add_to(m)
 
     # Add bike stations
-    if show_bikes and bike_stations:
+    if show_bikes and _bike_stations:
         bike_group = folium.FeatureGroup(name='Bike Stations', show=True)
 
-        for station in bike_stations:
+        for station in _bike_stations:
             bikes = station.get('bikes_available', 0)
             cargo_bikes = station.get('cargo_bikes_available', 0)
             
