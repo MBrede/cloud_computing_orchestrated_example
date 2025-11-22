@@ -195,25 +195,36 @@ def import_stadtteile_from_csv(conn, csv_path):
         csv_path: Path to CSV file containing Stadtteil data
     """
     cursor = conn.cursor()
-    stadtteile = set()
+    stadtteile = {}
 
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter=';')
         for row in reader:
             stadtteil_nr = int(row['Stadtteilnummer'])
             stadtteil_name = row['Stadtteil']
-            stadtteile.add((stadtteil_nr, stadtteil_name))
+            lat = row.get('lat', '').strip()
+            lon = row.get('lon', '').strip()
 
-    # Insert stadtteile
-    for nr, name in sorted(stadtteile):
+            # Convert coordinates to float or None
+            try:
+                latitude = float(lat) if lat else None
+                longitude = float(lon) if lon else None
+            except (ValueError, TypeError):
+                latitude = None
+                longitude = None
+
+            stadtteile[stadtteil_nr] = (stadtteil_name, latitude, longitude)
+
+    # Insert stadtteile with coordinates
+    for nr, (name, lat, lon) in sorted(stadtteile.items()):
         cursor.execute(
-            "INSERT IGNORE INTO stadtteile (stadtteil_nr, name) VALUES (%s, %s)",
-            (nr, name)
+            "INSERT IGNORE INTO stadtteile (stadtteil_nr, name, latitude, longitude) VALUES (%s, %s, %s, %s)",
+            (nr, name, lat, lon)
         )
 
     conn.commit()
     cursor.close()
-    logger.info(f">> Inserted {len(stadtteile)} Stadtteile")
+    logger.info(f">> Inserted {len(stadtteile)} Stadtteile with coordinates")
 
 
 def import_population_by_gender(conn, csv_path):

@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from models import (
-    POI, POICreate, 
+    Stadtteil, DemographicData, PopulationByAge,
     BikeStation, BikeStationCreate, BikeStationHistory,
     HealthCheck, Stats, ErrorResponse
 )
@@ -40,11 +40,11 @@ app = FastAPI(
     A comprehensive API demonstrating cloud computing concepts with multiple database systems.
     
     ## Features
-    
-    - **MySQL Integration**: Structured city data (Points of Interest)
+
+    - **MySQL Integration**: Structured demographic data (Stadtteile/Districts)
     - **MongoDB Integration**: Time-series bike sharing data
     - **Redis Caching**: Performance optimization for frequently accessed data
-    - **Full CRUD Operations**: Create, Read, Update, Delete for all resources
+    - **Demographic Data API**: Population statistics by age, gender, and district
     - **Data Validation**: Automatic request/response validation with Pydantic
     
     ## Database SDKs Used
@@ -141,17 +141,21 @@ async def health_check():
 async def get_stats():
     """
     Get system-wide statistics.
-    
+
     Returns:
         Stats: Aggregated statistics from all databases
     """
-    # Count POIs in MySQL
-    total_pois = 0
+    # Count Stadtteile and total population in MySQL
+    total_stadtteile = 0
+    total_population = 0
     try:
-        result = mysql_db.execute_query("SELECT COUNT(*) as count FROM points_of_interest")
-        total_pois = result[0]['count'] if result else 0
+        result = mysql_db.execute_query("SELECT COUNT(*) as count FROM stadtteile")
+        total_stadtteile = result[0]['count'] if result else 0
+
+        pop_result = mysql_db.execute_query("SELECT SUM(total) as total FROM population_by_gender")
+        total_population = pop_result[0]['total'] if pop_result and pop_result[0]['total'] else 0
     except Exception as e:
-        print(f"Error counting POIs: {e}")
+        print(f"Error counting districts: {e}")
     
     # Count stations and bikes in MongoDB
     total_stations = 0
@@ -167,7 +171,8 @@ async def get_stats():
         print(f"Error counting bikes: {e}")
     
     return Stats(
-        total_pois=total_pois,
+        total_stadtteile=total_stadtteile,
+        total_population=total_population,
         total_stations=total_stations,
         total_bikes_available=total_bikes,
         cache_hit_rate=None  # Could be calculated if Redis tracking is implemented
@@ -175,56 +180,45 @@ async def get_stats():
 
 
 # ============================================================================
-# City Data Endpoints (MySQL)
+# Demographic Data Endpoints (MySQL)
 # ============================================================================
 
 @app.get(
-    "/api/city/pois",
-    response_model=List[POI],
-    tags=["City Data"],
-    summary="List all Points of Interest",
-    description="Retrieve all POIs from MySQL database. Results are cached in Redis for 5 minutes."
+    "/api/stadtteile",
+    response_model=List[Stadtteil],
+    tags=["Demographics"],
+    summary="List all Stadtteile (districts)",
+    description="Retrieve all districts from MySQL database. Results are cached in Redis for 5 minutes."
 )
-async def list_pois(
-    poi_type: Optional[str] = Query(None, description="Filter by POI type"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results")
-):
+async def list_stadtteile():
     """
-    List all Points of Interest with optional filtering.
-    
+    List all Stadtteile (districts) in Kiel.
+
     This endpoint demonstrates:
     - SQL query execution with mysql-connector-python
     - Redis caching for performance
-    - Query parameters for filtering
-    
-    Args:
-        poi_type: Optional filter by type
-        limit: Maximum results to return
-    
+    - Returning structured district data with coordinates
+
     Returns:
-        List[POI]: List of points of interest
+        List[Stadtteil]: List of districts
     """
     # Try cache first
-    cache_key = f"pois:type:{poi_type}:limit:{limit}"
+    cache_key = "stadtteile:all"
     cached = redis_cache.get(cache_key)
     if cached:
         return cached
-    
+
     # Query MySQL
     try:
-        if poi_type:
-            query = "SELECT * FROM points_of_interest WHERE type = %s LIMIT %s"
-            results = mysql_db.execute_query(query, (poi_type, limit))
-        else:
-            query = "SELECT * FROM points_of_interest LIMIT %s"
-            results = mysql_db.execute_query(query, (limit,))
-        
-        pois = [POI(**row) for row in results]
-        
+        query = "SELECT stadtteil_nr, name, latitude, longitude FROM stadtteile ORDER BY stadtteil_nr"
+        results = mysql_db.execute_query(query)
+
+        stadtteile = [Stadtteil(**row) for row in results]
+
         # Cache results for 5 minutes
-        redis_cache.set(cache_key, [poi.model_dump() for poi in pois], ttl=300)
-        
-        return pois
+        redis_cache.set(cache_key, [s.model_dump() for s in stadtteile], ttl=300)
+
+        return stadtteile
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -233,36 +227,89 @@ async def list_pois(
 
 
 @app.get(
-    "/api/city/pois/{poi_id}",
-    response_model=POI,
-    tags=["City Data"],
-    summary="Get a specific POI",
-    description="Retrieve a single POI by its ID"
+    "/api/stadtteile/{stadtteil_nr}",
+    response_model=DemographicData,
+    tags=["Demographics"],
+    summary="Get demographic data for a specific Stadtteil",
+    description="Retrieve comprehensive demographic information for a district"
 )
-async def get_poi(poi_id: int):
+async def get_stadtteil_demographics(stadtteil_nr: int):
     """
-    Get a specific Point of Interest by ID.
-    
+    Get comprehensive demographic data for a specific Stadtteil.
+
+    This endpoint demonstrates:
+    - Complex SQL queries joining multiple tables
+    - Aggregating demographic data
+    - Structured response with nested data
+
     Args:
-        poi_id: The POI database ID
-    
+        stadtteil_nr: The district number
+
     Returns:
-        POI: The requested point of interest
-    
+        DemographicData: Complete demographic information
+
     Raises:
-        HTTPException: 404 if POI not found
+        HTTPException: 404 if district not found
     """
+    # Try cache first
+    cache_key = f"stadtteil:demographics:{stadtteil_nr}"
+    cached = redis_cache.get(cache_key)
+    if cached:
+        return DemographicData(**cached)
+
     try:
-        query = "SELECT * FROM points_of_interest WHERE id = %s"
-        results = mysql_db.execute_query(query, (poi_id,))
-        
-        if not results:
+        # Get basic Stadtteil info
+        stadtteil_query = "SELECT stadtteil_nr, name, latitude, longitude FROM stadtteile WHERE stadtteil_nr = %s"
+        stadtteil_result = mysql_db.execute_query(stadtteil_query, (stadtteil_nr,))
+
+        if not stadtteil_result:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"POI with id {poi_id} not found"
+                detail=f"Stadtteil with number {stadtteil_nr} not found"
             )
-        
-        return POI(**results[0])
+
+        stadtteil = stadtteil_result[0]
+
+        # Get population by gender (latest date)
+        gender_query = """
+            SELECT total, male, female
+            FROM population_by_gender
+            WHERE stadtteil_nr = %s
+            ORDER BY datum DESC
+            LIMIT 1
+        """
+        gender_result = mysql_db.execute_query(gender_query, (stadtteil_nr,))
+
+        total_pop = gender_result[0]['total'] if gender_result else 0
+        male_pop = gender_result[0]['male'] if gender_result else 0
+        female_pop = gender_result[0]['female'] if gender_result else 0
+
+        # Get age distribution (latest date)
+        age_query = """
+            SELECT age_group, count
+            FROM population_by_age
+            WHERE stadtteil_nr = %s
+            AND datum = (SELECT MAX(datum) FROM population_by_age WHERE stadtteil_nr = %s)
+            ORDER BY age_group
+        """
+        age_results = mysql_db.execute_query(age_query, (stadtteil_nr, stadtteil_nr))
+        age_distribution = [PopulationByAge(age_group=row['age_group'], count=row['count']) for row in age_results]
+
+        demographic_data = DemographicData(
+            stadtteil_nr=stadtteil['stadtteil_nr'],
+            name=stadtteil['name'],
+            total_population=total_pop,
+            male=male_pop,
+            female=female_pop,
+            age_distribution=age_distribution if age_results else None,
+            latitude=stadtteil.get('latitude'),
+            longitude=stadtteil.get('longitude')
+        )
+
+        # Cache for 5 minutes
+        redis_cache.set(cache_key, demographic_data.model_dump(), ttl=300)
+
+        return demographic_data
     except HTTPException:
         raise
     except Exception as e:
@@ -272,92 +319,42 @@ async def get_poi(poi_id: int):
         )
 
 
-@app.post(
-    "/api/city/pois",
-    response_model=POI,
-    status_code=status.HTTP_201_CREATED,
-    tags=["City Data"],
-    summary="Create a new POI",
-    description="Create a new Point of Interest in MySQL database"
-)
-async def create_poi(poi: POICreate):
-    """
-    Create a new Point of Interest.
-    
-    This endpoint demonstrates:
-    - POST request handling
-    - SQL INSERT with parameterized queries (prevents SQL injection)
-    - Returning created resource with 201 status
-    - Cache invalidation after write
-    
-    Args:
-        poi: POI data to create
-    
-    Returns:
-        POI: The created point of interest with assigned ID
-    """
-    try:
-        # Insert the new POI
-        insert_query = """
-            INSERT INTO points_of_interest (name, type, latitude, longitude, description)
-            VALUES (%s, %s, %s, %s, %s)
-        """
-        mysql_db.execute_query(
-            insert_query,
-            (poi.name, poi.type, poi.latitude, poi.longitude, poi.description),
-            fetch=False
-        )
-
-        # Get the inserted POI using LAST_INSERT_ID()
-        select_query = """
-            SELECT id, name, type, latitude, longitude, description
-            FROM points_of_interest
-            WHERE id = LAST_INSERT_ID()
-        """
-        result = mysql_db.execute_query(select_query)
-
-        # Invalidate related caches
-        redis_cache.clear_pattern("pois:*")
-
-        return POI(**result[0])
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}"
-        )
-
-
 @app.get(
-    "/api/city/search",
-    response_model=List[POI],
-    tags=["City Data"],
-    summary="Search POIs",
-    description="Search for POIs by name or type"
+    "/api/stadtteile/{stadtteil_nr}/population",
+    tags=["Demographics"],
+    summary="Get population summary for a Stadtteil",
+    description="Retrieve population count by gender for a specific district"
 )
-async def search_pois(
-    q: str = Query(..., min_length=1, description="Search query"),
-    search_field: str = Query("name", regex="^(name|type)$", description="Field to search in")
-):
+async def get_stadtteil_population(stadtteil_nr: int):
     """
-    Search for Points of Interest.
-    
-    This endpoint demonstrates:
-    - Full-text search with SQL LIKE
-    - Query parameter validation
-    - Dynamic query building
-    
+    Get population summary for a Stadtteil.
+
     Args:
-        q: Search query string
-        search_field: Field to search ('name' or 'type')
-    
+        stadtteil_nr: The district number
+
     Returns:
-        List[POI]: Matching points of interest
+        dict: Population summary with total, male, and female counts
     """
     try:
-        # MySQL uses LIKE (case-insensitive by default with utf8mb4_general_ci collation)
-        query = f"SELECT * FROM points_of_interest WHERE {search_field} LIKE %s LIMIT 50"
-        results = mysql_db.execute_query(query, (f"%{q}%",))
-        return [POI(**row) for row in results]
+        query = """
+            SELECT s.stadtteil_nr, s.name, p.total, p.male, p.female, p.datum
+            FROM stadtteile s
+            LEFT JOIN population_by_gender p ON s.stadtteil_nr = p.stadtteil_nr
+            WHERE s.stadtteil_nr = %s
+            ORDER BY p.datum DESC
+            LIMIT 1
+        """
+        result = mysql_db.execute_query(query, (stadtteil_nr,))
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Stadtteil with number {stadtteil_nr} not found"
+            )
+
+        return result[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -5,30 +5,46 @@ This module demonstrates best practices for API data validation using Pydantic.
 All models include proper type hints, constraints, and documentation.
 """
 
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Dict
+from datetime import datetime, date
 from pydantic import BaseModel, Field, ConfigDict
 
 
-class POIBase(BaseModel):
-    """Base model for Point of Interest data."""
-    name: str = Field(..., min_length=1, max_length=200, description="Name of the point of interest")
-    type: str = Field(..., min_length=1, max_length=50, description="Type of POI (e.g., museum, park, restaurant)")
-    latitude: float = Field(..., ge=-90, le=90, description="Latitude coordinate")
-    longitude: float = Field(..., ge=-180, le=180, description="Longitude coordinate")
-    description: Optional[str] = Field(None, max_length=1000, description="Detailed description")
+class Stadtteil(BaseModel):
+    """Model for Stadtteil (district) data."""
+    stadtteil_nr: int = Field(..., description="District number")
+    name: str = Field(..., description="District name")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude coordinate")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude coordinate")
 
-
-class POICreate(POIBase):
-    """Model for creating a new POI (POST request)."""
-    pass
-
-
-class POI(POIBase):
-    """Model for POI response (includes database ID)."""
-    id: int = Field(..., description="Unique identifier from database")
-    
     model_config = ConfigDict(from_attributes=True)
+
+
+class PopulationByGender(BaseModel):
+    """Model for population by gender data."""
+    stadtteil_nr: int = Field(..., description="District number")
+    datum: date = Field(..., description="Date of data")
+    total: int = Field(..., description="Total population")
+    male: int = Field(..., description="Male population")
+    female: int = Field(..., description="Female population")
+
+
+class PopulationByAge(BaseModel):
+    """Model for population by age group data."""
+    age_group: str = Field(..., description="Age group range")
+    count: int = Field(..., description="Population count in this age group")
+
+
+class DemographicData(BaseModel):
+    """Model for comprehensive demographic data of a Stadtteil."""
+    stadtteil_nr: int = Field(..., description="District number")
+    name: str = Field(..., description="District name")
+    total_population: int = Field(..., description="Total population")
+    male: int = Field(..., description="Male population")
+    female: int = Field(..., description="Female population")
+    age_distribution: Optional[List[PopulationByAge]] = Field(None, description="Age distribution")
+    latitude: Optional[float] = Field(None, description="Latitude coordinate")
+    longitude: Optional[float] = Field(None, description="Longitude coordinate")
 
 
 class BikeStationBase(BaseModel):
@@ -72,7 +88,8 @@ class HealthCheck(BaseModel):
 
 class Stats(BaseModel):
     """Model for database statistics."""
-    total_pois: int = Field(..., description="Total points of interest in MySQL")
+    total_stadtteile: int = Field(..., description="Total districts in MySQL")
+    total_population: int = Field(..., description="Total population across all districts")
     total_stations: int = Field(..., description="Total bike stations in MongoDB")
     total_bikes_available: int = Field(..., description="Total bikes currently available")
     cache_hit_rate: Optional[float] = Field(None, description="Redis cache hit rate")
