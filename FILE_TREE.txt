@@ -29,7 +29,7 @@ cloud_computing_orchestrated_example/
 │   ├── requirements.txt          # Python dependencies
 │   └── Dockerfile                # Container configuration
 │
-├── data-loader/ - PostgreSQL Initialization (4 files)
+├── data-loader/ - MySQL Initialization (4 files)
 │   ├── load_kiel_data.py         # Data loading script (200+ lines)
 │   ├── requirements.txt          # Python dependencies
 │   └── Dockerfile                # Container configuration

@@ -64,7 +64,7 @@ class BikeStationHistory(BaseModel):
 class HealthCheck(BaseModel):
     """Model for health check response."""
     status: str = Field(..., description="Overall system status")
-    postgres: bool = Field(..., description="MySQL connection status")
+    mysql: bool = Field(..., description="MySQL connection status")
     mongodb: bool = Field(..., description="MongoDB connection status")
     redis: bool = Field(..., description="Redis connection status")
     timestamp: datetime = Field(..., description="Time of health check")

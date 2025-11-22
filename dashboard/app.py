@@ -112,7 +112,7 @@ def fetch_health():
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        return {"status": "error", "postgres": False, "mongodb": False, "redis": False}  # Note: 'postgres' field name kept for API compatibility
+        return {"status": "error", "mysql": False, "mongodb": False, "redis": False}
 
 
 def create_map(pois, bike_stations, show_pois=True, show_bikes=True):
@@ -235,7 +235,7 @@ def main():
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            mysql_icon = "✅" if health.get("postgres") else "❌"
+            mysql_icon = "✅" if health.get("mysql") else "❌"
             st.markdown(f"{mysql_icon} MySQL")
         with col2:
             mg_icon = "✅" if health.get("mongodb") else "❌"

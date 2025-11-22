@@ -91,40 +91,40 @@ app.add_middleware(
 async def health_check():
     """
     Health check endpoint to verify all services are operational.
-    
+
     Returns:
         HealthCheck: Status of all database connections
     """
-    mariadb_healthy = False
+    mysql_healthy = False
     mongodb_healthy = False
     redis_healthy = False
-    
+
     # Check MySQL
     try:
         mysql_db.execute_query("SELECT 1", fetch=True)
-        mariadb_healthy = True
+        mysql_healthy = True
     except Exception as e:
         print(f"MySQL health check failed: {e}")
-    
+
     # Check MongoDB
     try:
         mongo_db.client.admin.command('ping')
         mongodb_healthy = True
     except Exception as e:
         print(f"MongoDB health check failed: {e}")
-    
+
     # Check Redis
     try:
         redis_cache.client.ping()
         redis_healthy = True
     except Exception as e:
         print(f"Redis health check failed: {e}")
-    
-    overall_status = "healthy" if all([mariadb_healthy, mongodb_healthy, redis_healthy]) else "degraded"
-    
+
+    overall_status = "healthy" if all([mysql_healthy, mongodb_healthy, redis_healthy]) else "degraded"
+
     return HealthCheck(
         status=overall_status,
-        postgres=mariadb_healthy,
+        mysql=mysql_healthy,
         mongodb=mongodb_healthy,
         redis=redis_healthy,
         timestamp=datetime.now()
