@@ -19,9 +19,9 @@ A comprehensive example of an orchestrated cloud computing application showcasin
                     │              │              │
                     ▼              ▼              ▼
           ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-          │   Redis     │  │ PostgreSQL  │  │   MongoDB   │
+          │   Redis     │  │ MySQL  │  │   MongoDB   │
           │   Cache     │  │  Kiel Data  │  │  Bike Data  │
-          │  Port: 6379 │  │ Port: 5432  │  │ Port: 27017 │
+          │  Port: 6379 │  │ Port: 3306  │  │ Port: 27017 │
           └─────────────┘  └─────────────┘  └─────────────┘
                                    ▲
                                    │
@@ -46,7 +46,7 @@ A comprehensive example of an orchestrated cloud computing application showcasin
   - This README with setup instructions
 
 - **Database (5 points)**
-  - PostgreSQL for structured city data
+  - MySQL for structured city data
   - MongoDB for bike-sharing time-series data
   - Redis for caching frequently accessed data
 
@@ -67,7 +67,7 @@ A comprehensive example of an orchestrated cloud computing application showcasin
 - **Additional Endpoints (~10 points)**: Batch operations, search, filtering
 - **NoSQL with Good Reason (~15 points)**: MongoDB for time-series bike data
 - **Redis Caching (~5 points)**: Performance optimization
-- **Multiple Database SDKs**: psycopg2 (SQL) and pymongo (MongoDB) examples
+- **Multiple Database SDKs**: mysql-connector-python (SQL) and pymongo (MongoDB) examples
 
 **Total Points: 30 base + 40 bonus = 70 points (before presentation)**
 
@@ -97,7 +97,7 @@ A comprehensive example of an orchestrated cloud computing application showcasin
    ```
 
 4. **Wait for initialization** (~30 seconds):
-   - PostgreSQL will be populated with Kiel city data
+   - MySQL will be populated with Kiel city data
    - MongoDB will start collecting bike-sharing data
    - All services will become available
 
@@ -121,7 +121,7 @@ docker-compose down -v
 
 ### Endpoints Overview
 
-#### City Data (PostgreSQL)
+#### City Data (MySQL)
 
 - `GET /api/city/pois` - List all points of interest
 - `GET /api/city/pois/{poi_id}` - Get specific POI
@@ -167,14 +167,14 @@ curl http://localhost:8000/api/bikes/stations
 
 ## 🗄️ Database Details
 
-### PostgreSQL - City Data
+### MySQL - City Data
 
 **Schema**: Structured relational data
 - Table: `points_of_interest`
 - Columns: id, name, type, latitude, longitude, description
 - Use case: Static city infrastructure data
 
-**SDK Example**: `psycopg2` with connection pooling
+**SDK Example**: `mysql-connector-python` with connection pooling
 
 ### MongoDB - Bike Sharing
 
@@ -205,7 +205,7 @@ curl http://localhost:8000/api/bikes/stations
 │   ├── app.py            # Dashboard code
 │   ├── requirements.txt
 │   └── Dockerfile
-├── data-loader/          # PostgreSQL initialization
+├── data-loader/          # MySQL initialization
 │   ├── load_kiel_data.py
 │   ├── requirements.txt
 │   └── Dockerfile
@@ -226,6 +226,31 @@ curl http://localhost:8000/api/bikes/stations
 3. **Network Isolation**: Docker internal network
 4. **Health Checks**: All containers monitored
 5. **Least Privilege**: Service-specific database users
+
+## ⚡ Performance Optimizations
+
+### Fast Package Installation with uv
+
+All Docker containers use [uv](https://github.com/astral-sh/uv) instead of pip for package installation:
+
+- **10-100x faster** than pip for package installation
+- **Written in Rust** for maximum performance
+- **Drop-in replacement** for pip install
+- **Production-ready** from the Astral team (creators of Ruff)
+
+Example from `api/Dockerfile`:
+```dockerfile
+# Install uv for fast package management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Install dependencies using uv (much faster than pip)
+RUN uv pip install --system --no-cache -r requirements.txt
+```
+
+Benefits:
+- Faster container builds (especially during development)
+- Reduced CI/CD pipeline times
+- Same requirements.txt format as pip
 
 ## 📊 Dashboard Features
 
@@ -251,7 +276,7 @@ The Streamlit dashboard provides:
 This example demonstrates:
 
 1. **Database SDK Usage**:
-   - SQL operations with psycopg2
+   - SQL operations with mysql-connector-python
    - NoSQL operations with pymongo
    - Connection management and pooling
 
@@ -278,7 +303,7 @@ This example demonstrates:
 # Check if ports are already in use
 lsof -i :8000  # API
 lsof -i :8501  # Dashboard
-lsof -i :5432  # PostgreSQL
+lsof -i :3306  # MySQL
 lsof -i :27017 # MongoDB
 
 # View logs

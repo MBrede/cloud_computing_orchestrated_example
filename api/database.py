@@ -2,12 +2,12 @@
 Database connection management and SDK examples.
 
 This module demonstrates proper usage of:
-- psycopg2 for PostgreSQL (SQL database SDK)
+- mysql-connector-python for MySQL (SQL database SDK)
 - pymongo for MongoDB (NoSQL database SDK)
 - redis for caching
 
 Key learning points:
-1. Connection pooling for PostgreSQL
+1. Connection pooling for MySQL
 2. Context managers for safe connection handling
 3. Error handling and retries
 4. Cursor management in SQL
@@ -16,8 +16,8 @@ Key learning points:
 
 import os
 import time
-import psycopg2
-from psycopg2 import pool, extras
+import mysql.connector
+from mysql.connector import pooling, Error as MySQLError
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import redis
@@ -30,85 +30,99 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class PostgreSQLDatabase:
+class MySQLDatabase:
     """
-    PostgreSQL database connection manager using psycopg2.
-    
+    MySQL database connection manager using mysql-connector-python.
+
     This class demonstrates:
     - Connection pooling for efficient resource usage
     - Proper connection lifecycle management
     - SQL query execution with parameterized queries (防止 SQL injection)
     - Transaction handling
+    - Dict-based result rows for easier data access
+
+    mysql-connector-python is the official MySQL driver from Oracle.
+    It's pure Python, well-maintained, and familiar to students who use MySQL.
     """
-    
+
     def __init__(self):
-        """Initialize PostgreSQL connection pool."""
-        self.pool: Optional[pool.SimpleConnectionPool] = None
+        """Initialize MySQL connection pool."""
+        self.pool: Optional[pooling.MySQLConnectionPool] = None
         self._initialize_pool()
-    
+
     def _initialize_pool(self, retries=5):
         """
         Initialize connection pool with retry logic.
-        
+
         Args:
             retries: Number of connection attempts before failing
         """
         for attempt in range(retries):
             try:
-                self.pool = psycopg2.pool.SimpleConnectionPool(
-                    minconn=1,
-                    maxconn=10,
-                    host=os.getenv('POSTGRES_HOST', 'postgres'),
-                    port=os.getenv('POSTGRES_PORT', '5432'),
-                    database=os.getenv('POSTGRES_DB', 'kiel_data'),
-                    user=os.getenv('POSTGRES_USER', 'kiel_user'),
-                    password=os.getenv('POSTGRES_PASSWORD', 'kiel_secure_password_2024')
+                # Create connection pool
+                self.pool = pooling.MySQLConnectionPool(
+                    pool_name="kiel_pool",
+                    pool_size=10,
+                    pool_reset_session=True,
+                    host=os.getenv('MYSQL_HOST', 'mysql'),
+                    port=int(os.getenv('MYSQL_PORT', '3306')),
+                    database=os.getenv('MYSQL_DB', 'kiel_data'),
+                    user=os.getenv('MYSQL_USER', 'kiel_user'),
+                    password=os.getenv('MYSQL_PASSWORD', 'kiel_secure_password_2024'),
+                    autocommit=False  # Explicit transaction control
                 )
-                logger.info("PostgreSQL connection pool created successfully")
+
+                # Test connection
+                conn = self.pool.get_connection()
+                conn.ping(reconnect=True, attempts=3, delay=1)
+                conn.close()
+
+                logger.info("MySQL connection pool created successfully")
                 return
-            except psycopg2.OperationalError as e:
-                logger.warning(f"PostgreSQL connection attempt {attempt + 1} failed: {e}")
+            except MySQLError as e:
+                logger.warning(f"MySQL connection attempt {attempt + 1} failed: {e}")
                 if attempt < retries - 1:
                     time.sleep(2 ** attempt)  # Exponential backoff
                 else:
-                    logger.error("Failed to connect to PostgreSQL after all retries")
+                    logger.error("Failed to connect to MySQL after all retries")
                     raise
-    
+
     def get_connection(self):
         """
         Get a connection from the pool.
-        
+
         Returns:
-            psycopg2 connection object
-        
+            mysql.connector connection object
+
         Example usage:
             conn = db.get_connection()
             try:
                 # Use connection
             finally:
-                db.return_connection(conn)
+                conn.close()
         """
         if self.pool is None:
             self._initialize_pool()
-        return self.pool.getconn()
-    
-    def return_connection(self, conn):
-        """Return a connection to the pool."""
-        if self.pool and conn:
-            self.pool.putconn(conn)
-    
-    def execute_query(self, query: str, params: tuple = None, fetch: bool = True) -> Optional[List]:
+        return self.pool.get_connection()
+
+    def execute_query(self, query: str, params: tuple = None, fetch: bool = True) -> Optional[List[Dict]]:
         """
         Execute a SQL query with proper connection management.
-        
+
+        This demonstrates:
+        - Parameterized queries with %s placeholders (防止 SQL injection)
+        - Dictionary cursor for easy column access
+        - Proper transaction handling
+        - Automatic resource cleanup
+
         Args:
             query: SQL query string (use %s for parameters)
             params: Query parameters (prevents SQL injection)
             fetch: Whether to fetch and return results
-        
+
         Returns:
-            Query results as list of tuples, or None
-        
+            Query results as list of dicts, or None
+
         Example:
             results = db.execute_query(
                 "SELECT * FROM points_of_interest WHERE type = %s",
@@ -118,55 +132,69 @@ class PostgreSQLDatabase:
         conn = None
         try:
             conn = self.get_connection()
-            with conn.cursor(cursor_factory=extras.RealDictCursor) as cursor:
-                cursor.execute(query, params)
-                if fetch:
-                    return cursor.fetchall()
+            cursor = conn.cursor(dictionary=True)  # Return rows as dictionaries
+
+            cursor.execute(query, params)
+
+            if fetch:
+                results = cursor.fetchall()
+                cursor.close()
+                return results
+            else:
                 conn.commit()
+                cursor.close()
                 return None
-        except Exception as e:
+
+        except MySQLError as e:
             if conn:
                 conn.rollback()
             logger.error(f"Database query error: {e}")
             raise
         finally:
             if conn:
-                self.return_connection(conn)
-    
+                conn.close()
+
     def execute_many(self, query: str, params_list: List[tuple]) -> None:
         """
         Execute a query multiple times with different parameters (batch insert).
-        
+
+        This demonstrates executemany for efficient batch operations.
+        Particularly useful for bulk inserts.
+
         Args:
             query: SQL query string
             params_list: List of parameter tuples
-        
+
         Example:
             db.execute_many(
-                "INSERT INTO points_of_interest (name, type, lat, lon) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO points_of_interest (name, type, latitude, longitude) VALUES (%s, %s, %s, %s)",
                 [('Museum', 'culture', 54.32, 10.13), ('Park', 'nature', 54.31, 10.12)]
             )
         """
         conn = None
         try:
             conn = self.get_connection()
-            with conn.cursor() as cursor:
-                cursor.executemany(query, params_list)
-                conn.commit()
-        except Exception as e:
+            cursor = conn.cursor()
+
+            cursor.executemany(query, params_list)
+            conn.commit()
+            cursor.close()
+
+        except MySQLError as e:
             if conn:
                 conn.rollback()
             logger.error(f"Batch execution error: {e}")
             raise
         finally:
             if conn:
-                self.return_connection(conn)
-    
+                conn.close()
+
     def close(self):
         """Close all connections in the pool."""
         if self.pool:
-            self.pool.closeall()
-            logger.info("PostgreSQL connection pool closed")
+            # Connection pool doesn't have a direct close method
+            # Connections are closed when they're returned to the pool
+            logger.info("MySQL connection pool cleanup initiated")
 
 
 class MongoDatabase:
@@ -458,6 +486,6 @@ class RedisCache:
 
 
 # Global database instances
-postgres_db = PostgreSQLDatabase()
+mysql_db = MySQLDatabase()
 mongo_db = MongoDatabase()
 redis_cache = RedisCache()
