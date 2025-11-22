@@ -128,8 +128,9 @@ def parse_station_data(api_data):
                     'name': hub.get('name', 'Unknown Station'),
                     'latitude': hub.get('latitude') or hub.get('lat', 0.0),
                     'longitude': hub.get('longitude') or hub.get('lng', 0.0),
-                    'bikes_available': hub.get('available_bikes', 0),
-                    'capacity': hub.get('max_bikes') or hub.get('capacity'),
+                    'bikes_available': hub.get('available_vehicles', {}).get("bike", 0),
+                    'cargo_bikes_available': hub.get('available_vehicles', {}).get("cargo", 0),
+                    'capacity': hub.get('maximum_capacity') or hub.get('capacity'),
                     'last_updated': datetime.now(),
                     'location': {
                         'type': 'Point',
