@@ -276,8 +276,14 @@ def import_stadtteile_from_all_csvs(conn, data_dir):
     cursor.close()
     logger.info(f">> Inserted {len(stadtteile_map)} Stadtteile with coordinates")
 
+    # Query database to get actual list of valid stadtteil numbers
+    # (some might have been skipped during insert due to missing data)
+    cursor = conn.cursor()
+    cursor.execute("SELECT stadtteil_nr FROM stadtteile")
+    valid_stadtteile_nrs = set(row[0] for row in cursor.fetchall())
+    cursor.close()
+
     # Return both name-to-number mapping and set of valid numbers for validation
-    valid_stadtteile_nrs = set(stadtteile_map.keys())
     return stadtteile_by_name, valid_stadtteile_nrs
 
 
