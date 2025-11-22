@@ -459,14 +459,16 @@ class RedisCache:
             ttl: Time to live in seconds (default 300 = 5 minutes)
         """
         try:
-            if isinstance(value, dict):
-                content = {k:str(v)
-                           for v in value.items()}
-            elif isinstance(value, list):
-                content = [str(v) for v in value]
-            else:
-                content = str(value)
-            self.client.setex(key, ttl, json.dumps(content))
+            # Use custom JSON encoder to handle datetime and other non-serializable types
+            from datetime import datetime
+
+            def json_serializer(obj):
+                """Custom JSON serializer for objects not serializable by default json code"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Type {type(obj)} not serializable")
+
+            self.client.setex(key, ttl, json.dumps(value, default=json_serializer))
         except Exception as e:
             logger.error(f"Redis set error: {e}")
     
