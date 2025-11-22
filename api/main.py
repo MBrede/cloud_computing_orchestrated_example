@@ -405,14 +405,28 @@ async def list_bike_stations(
         return cached
     
     try:
-        query = {"bikes_available": {"$gte": min_bikes}, 
+        query = {"bikes_available": {"$gte": min_bikes},
                  "cargo_bikes_available": {"$gte": min_cargo_bikes}}
         stations = mongo_db.find_many('bike_stations', query, limit=limit)
-        
-        # Cache for 1 minute (bike availability changes frequently)
-        redis_cache.set(cache_key, stations, ttl=60)
-        
-        return [BikeStation(**station) for station in stations]
+
+        # Convert MongoDB documents to BikeStation models
+        # Handle string lat/lon and convert _id ObjectId to string
+        result = []
+        for station in stations:
+            # Convert _id ObjectId to string
+            station['_id'] = str(station['_id'])
+            # Convert string lat/lon to float
+            station['latitude'] = float(station['latitude'])
+            station['longitude'] = float(station['longitude'])
+            # Remove extra fields not in model
+            station.pop('location', None)
+
+            result.append(BikeStation(**station))
+
+        # Cache the result models (they're now JSON-serializable)
+        redis_cache.set(cache_key, [s.model_dump() for s in result], ttl=60)
+
+        return result
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
