@@ -430,7 +430,13 @@ def import_generic_data(conn, csv_path, table_name, merkmal_column, stadtteile_m
             try:
                 datum = row['Datum'].replace('_', '-')
             except KeyError:
-                datum = row.get('Jahr', '2023').replace('_', '-') + "-01-01"
+                jahr_value = row.get('Jahr', '2023')
+                # If Jahr contains underscores/dashes or is longer than 4 chars, it's a full date
+                if '_' in jahr_value or '-' in jahr_value or len(jahr_value) > 4:
+                    datum = jahr_value.replace('_', '-')
+                else:
+                    # It's just a year, append -01-01
+                    datum = jahr_value + "-01-01"
 
             # Import data columns
             for header in headers:
