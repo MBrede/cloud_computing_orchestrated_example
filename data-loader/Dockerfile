@@ -1,16 +1,24 @@
-FROM python:3.11-slim
+FROM python:3.12-slim-trixie
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+ENV UV_NO_CACHE=1 \ 
+    VIRTUAL_ENV=/app/.venv
+
+# Change wd to app directory
 WORKDIR /app
 
-# Install uv for fast package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Create virtual environment
+RUN uv venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install dependencies using uv
 COPY requirements.txt .
-RUN uv pip install --system --no-cache -r requirements.txt
+RUN cat requirements.txt
+RUN uv --version
+RUN uv pip install -r requirements.txt
 
 # Copy script
 COPY load_kiel_data.py .
 
 # Run the data loader
-CMD ["python", "load_kiel_data.py"]
+CMD ["uv", "run", "load_kiel_data.py"]

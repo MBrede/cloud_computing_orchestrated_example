@@ -1,16 +1,23 @@
-FROM python:3.11-slim
+FROM python:3.12-slim-trixie
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+ENV UV_NO_CACHE=1 \
+    VIRTUAL_ENV=/app/.venv
 
 # Install cron
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cron \
+    && rm -rf /var/lib/apt/lists/*
 
+# Change wd to app directory
 WORKDIR /app
 
-# Install uv for fast package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Create virtual environment
+RUN uv venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Install Python dependencies using uv
+# Install dependencies using uv
 COPY requirements.txt .
-RUN uv pip install --system --no-cache -r requirements.txt
+RUN uv pip install -r requirements.txt
 
 # Copy application files
 COPY fetch_bikes.py .
