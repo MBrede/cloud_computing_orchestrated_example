@@ -48,8 +48,8 @@ app = FastAPI(
     - **Data Validation**: Automatic request/response validation with Pydantic
     
     ## Database SDKs Used
-    
-    - **psycopg2**: MySQL driver for Python
+
+    - **mysql-connector-python**: Official MySQL driver for Python
     - **pymongo**: MongoDB driver for Python
     - **redis-py**: Redis client for Python
     
@@ -193,7 +193,7 @@ async def list_pois(
     List all Points of Interest with optional filtering.
     
     This endpoint demonstrates:
-    - SQL query execution with psycopg2
+    - SQL query execution with mysql-connector-python
     - Redis caching for performance
     - Query parameters for filtering
     
@@ -297,19 +297,28 @@ async def create_poi(poi: POICreate):
         POI: The created point of interest with assigned ID
     """
     try:
-        query = """
+        # Insert the new POI
+        insert_query = """
             INSERT INTO points_of_interest (name, type, latitude, longitude, description)
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING id, name, type, latitude, longitude, description
         """
-        result = mysql_db.execute_query(
-            query,
-            (poi.name, poi.type, poi.latitude, poi.longitude, poi.description)
+        mysql_db.execute_query(
+            insert_query,
+            (poi.name, poi.type, poi.latitude, poi.longitude, poi.description),
+            fetch=False
         )
-        
+
+        # Get the inserted POI using LAST_INSERT_ID()
+        select_query = """
+            SELECT id, name, type, latitude, longitude, description
+            FROM points_of_interest
+            WHERE id = LAST_INSERT_ID()
+        """
+        result = mysql_db.execute_query(select_query)
+
         # Invalidate related caches
         redis_cache.clear_pattern("pois:*")
-        
+
         return POI(**result[0])
     except Exception as e:
         raise HTTPException(
@@ -345,7 +354,8 @@ async def search_pois(
         List[POI]: Matching points of interest
     """
     try:
-        query = f"SELECT * FROM points_of_interest WHERE {search_field} ILIKE %s LIMIT 50"
+        # MySQL uses LIKE (case-insensitive by default with utf8mb4_general_ci collation)
+        query = f"SELECT * FROM points_of_interest WHERE {search_field} LIKE %s LIMIT 50"
         results = mysql_db.execute_query(query, (f"%{q}%",))
         return [POI(**row) for row in results]
     except Exception as e:
@@ -569,7 +579,7 @@ async def root():
         "health_check": "/health",
         "stats": "/api/stats",
         "learning_focus": [
-            "MySQL SDK (psycopg2)",
+            "MySQL SDK (mysql-connector-python)",
             "MongoDB SDK (pymongo)",
             "Redis caching",
             "FastAPI framework",
