@@ -38,7 +38,6 @@ A comprehensive example of an orchestrated cloud computing application showcasin
 - **API Implementation (10 points)**
   - FastAPI with POST endpoints (create bike station, add city POI)
   - FastAPI with GET endpoints (list stations, get city data, search)
-  - Full CRUD operations
 
 - **Documentation (5 points)**
   - Interactive Swagger UI at `http://localhost:8000/docs`
@@ -50,10 +49,11 @@ A comprehensive example of an orchestrated cloud computing application showcasin
   - MongoDB for bike-sharing time-series data
   - Redis for caching frequently accessed data
 
-- **Data Processing Client (10 points - BONUS)**
+- **Data Processing Client (5 points + 5 bonus points)**
   - Interactive Streamlit dashboard
   - Map visualization of Kiel with data overlays
   - Real-time bike availability display
+  - Additionally data-loader container
 
 - **Container Deployment (5 points)**
   - Docker Compose orchestration
@@ -69,7 +69,7 @@ A comprehensive example of an orchestrated cloud computing application showcasin
 - **Redis Caching (~5 points)**: Performance optimization
 - **Multiple Database SDKs**: mysql-connector-python (SQL) and pymongo (MongoDB) examples
 
-**Total Points: 30 base + 40 bonus = 70 points (before presentation)**
+**Total Points: 30 base + 45 bonus = 75 points (before presentation)**
 
 ## 🚀 Quick Start
 
@@ -117,94 +117,6 @@ To remove all data volumes:
 docker-compose down -v
 ```
 
-## 📚 API Documentation
-
-### Endpoints Overview
-
-#### City Data (MySQL)
-
-- `GET /api/city/pois` - List all points of interest
-- `GET /api/city/pois/{poi_id}` - Get specific POI
-- `POST /api/city/pois` - Create new POI
-- `GET /api/city/search` - Search POIs by name or type
-
-#### Bike Sharing (MongoDB)
-
-- `GET /api/bikes/stations` - List all bike stations (cached)
-- `GET /api/bikes/stations/{station_id}` - Get specific station
-- `GET /api/bikes/stations/{station_id}/history` - Get availability history
-- `POST /api/bikes/stations` - Create new bike station
-
-#### Health & Info
-
-- `GET /health` - System health check
-- `GET /api/stats` - Database statistics
-
-### Example API Usage
-
-**Get all POIs with caching**:
-```bash
-curl http://localhost:8000/api/city/pois
-```
-
-**Create a new POI**:
-```bash
-curl -X POST http://localhost:8000/api/city/pois \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Kiel Harbor",
-    "type": "landmark",
-    "latitude": 54.3233,
-    "longitude": 10.1394,
-    "description": "Beautiful harbor area"
-  }'
-```
-
-**Get bike stations**:
-```bash
-curl http://localhost:8000/api/bikes/stations
-```
-
-## 🗄️ Database Details
-
-### MySQL - City Data
-
-**Data Source**: [Kiel Open Data Portal](https://www.kiel.de/de/kiel_zukunft/statistik_kieler_zahlen/open_data/index.php)
-
-The system uses official demographic and statistical data from the City of Kiel's Open Data initiative, including:
-- Population by district (Stadtteile) and gender
-- Age group distributions
-- Religious affiliations
-- Family status statistics
-- Foreign residents by nationality
-- Household types and sizes
-
-**Schema**: Structured relational data with multiple tables:
-- `stadtteile`: District information with lat/lng coordinates
-- `population_by_gender`: Population counts by gender per district
-- `population_by_age`: Age group distributions
-- `population_by_religion`: Religious affiliation data
-- `population_by_family_status`: Marital status statistics
-- `foreigners_by_nationality`: Foreign residents data
-- `households`: Household statistics
-
-**SDK Example**: `mysql-connector-python` with connection pooling
-
-### MongoDB - Bike Sharing
-
-**Schema**: Time-series documents
-- Collection: `bike_stations`
-- Documents: station info with availability snapshots
-- Use case: Dynamic data that changes frequently
-
-**SDK Example**: `pymongo` with async capabilities
-
-### Redis - Caching
-
-- Cache for frequently accessed endpoints
-- TTL: 60 seconds for bike data, 300 seconds for city data
-- Automatic invalidation
-
 ## 🔧 Project Structure
 
 ```
@@ -233,125 +145,6 @@ The system uses official demographic and statistical data from the City of Kiel'
 └── README.md
 ```
 
-## 🔒 Security Best Practices
-
-1. **Environment Variables**: All credentials in `.env` file
-2. **No Hardcoded Secrets**: Database passwords externalized
-3. **Network Isolation**: Docker internal network
-4. **Health Checks**: All containers monitored
-5. **Least Privilege**: Service-specific database users
-
-## ⚡ Performance Optimizations
-
-### Fast Package Installation with uv
-
-All Docker containers use [uv](https://github.com/astral-sh/uv) instead of pip for package installation:
-
-- **10-100x faster** than pip for package installation
-- **Written in Rust** for maximum performance
-- **Drop-in replacement** for pip install
-- **Production-ready** from the Astral team (creators of Ruff)
-
-Example from `api/Dockerfile`:
-```dockerfile
-# Install uv for fast package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
-# Install dependencies using uv (much faster than pip)
-RUN uv pip install --system --no-cache -r requirements.txt
-```
-
-Benefits:
-- Faster container builds (especially during development)
-- Reduced CI/CD pipeline times
-- Same requirements.txt format as pip
-
-## 📊 Dashboard Features
-
-The Streamlit dashboard provides:
-
-1. **Interactive Map of Kiel**
-   - Points of Interest markers
-   - Bike station locations
-   - Real-time bike availability
-
-2. **Data Filters**
-   - Filter by POI type
-   - Filter by bike availability
-   - Time-based historical data
-
-3. **Statistics**
-   - Total stations and bikes
-   - Database record counts
-   - System health status
-
-## 🎓 Learning Objectives
-
-This example demonstrates:
-
-1. **Database SDK Usage**:
-   - SQL operations with mysql-connector-python
-   - NoSQL operations with pymongo
-   - Connection management and pooling
-
-2. **API Development**:
-   - RESTful design patterns
-   - Request/response validation
-   - Auto-generated documentation
-
-3. **Containerization**:
-   - Multi-container orchestration
-   - Service dependencies
-   - Volume management
-
-4. **Caching Strategies**:
-   - Redis integration
-   - Cache invalidation
-   - Performance optimization
-
-## 🐛 Troubleshooting
-
-### Services won't start
-
-```bash
-# Check if ports are already in use
-lsof -i :8000  # API
-lsof -i :8501  # Dashboard
-lsof -i :3306  # MySQL
-lsof -i :27017 # MongoDB
-
-# View logs
-docker-compose logs -f [service-name]
-```
-
-### Database connection errors
-
-```bash
-# Ensure databases are healthy
-docker-compose ps
-
-# Restart specific service
-docker-compose restart api
-```
-
-### No bike data appearing
-
-```bash
-# Check cron job logs
-docker-compose logs cron-job
-
-# Manually trigger sync
-docker-compose exec cron-job python /app/fetch_bikes.py
-```
-
-## 📝 License
-
-Educational example for Cloud Computing course.
-
 ## 🤝 Contributing
 
 This is an example project for educational purposes. Feel free to fork and extend!
-
-## 📧 Questions?
-
-Check the Swagger documentation at http://localhost:8000/docs for interactive API exploration.

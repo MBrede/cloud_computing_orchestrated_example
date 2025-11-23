@@ -1,4 +1,4 @@
 # Fetch bike data every 5 minutes
-*/5 * * * * cd /app && /usr/local/bin/python /app/fetch_bikes.py >> /var/log/cron.log 2>&1
+*/5 * * * * cd /app && /app/.venv/bin/python /app/fetch_bikes.py >> /var/log/cron.log 2>&1
 
 # Empty line required at end of crontab
