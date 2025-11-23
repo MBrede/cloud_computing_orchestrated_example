@@ -26,7 +26,8 @@ from fastapi.responses import JSONResponse
 from models import (
     Stadtteil, DemographicData, PopulationByAge,
     BikeStation, BikeStationCreate, BikeStationHistory,
-    HealthCheck, Stats, ErrorResponse
+    HealthCheck, Stats, ErrorResponse,
+    PopulationByReligion, PopulationByNationality
 )
 from database import mysql_db, mongo_db, redis_cache
 
@@ -358,6 +359,267 @@ async def get_stadtteil_population(stadtteil_nr: int):
             )
 
         return result[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+
+
+@app.get(
+    "/api/stadtteile/{stadtteil_nr}/religions",
+    response_model=List[PopulationByReligion],
+    tags=["Demographics"],
+    summary="Get religion distribution for a Stadtteil",
+    description="Retrieve population count by religion for a specific district"
+)
+async def get_stadtteil_religions(stadtteil_nr: int):
+    """
+    Get religion distribution for a Stadtteil.
+
+    Args:
+        stadtteil_nr: The district number
+
+    Returns:
+        List[PopulationByReligion]: Religion distribution data
+    """
+    try:
+        query = """
+            SELECT religion, count
+            FROM population_by_religion
+            WHERE stadtteil_nr = %s
+            AND datum = (SELECT MAX(datum) FROM population_by_religion WHERE stadtteil_nr = %s)
+            ORDER BY count DESC
+        """
+        results = mysql_db.execute_query(query, (stadtteil_nr, stadtteil_nr))
+
+        if not results:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No religion data found for Stadtteil {stadtteil_nr}"
+            )
+
+        return [PopulationByReligion(**row) for row in results]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+
+
+@app.get(
+    "/api/stadtteile/{stadtteil_nr}/nationalities",
+    response_model=List[PopulationByNationality],
+    tags=["Demographics"],
+    summary="Get nationality distribution for a Stadtteil",
+    description="Retrieve foreign population count by nationality for a specific district"
+)
+async def get_stadtteil_nationalities(stadtteil_nr: int):
+    """
+    Get nationality distribution for a Stadtteil.
+
+    Args:
+        stadtteil_nr: The district number
+
+    Returns:
+        List[PopulationByNationality]: Nationality distribution data
+    """
+    try:
+        query = """
+            SELECT nationality, count
+            FROM foreigners_by_nationality
+            WHERE stadtteil_nr = %s
+            AND datum = (SELECT MAX(datum) FROM foreigners_by_nationality WHERE stadtteil_nr = %s)
+            ORDER BY count DESC
+        """
+        results = mysql_db.execute_query(query, (stadtteil_nr, stadtteil_nr))
+
+        if not results:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No nationality data found for Stadtteil {stadtteil_nr}"
+            )
+
+        return [PopulationByNationality(**row) for row in results]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+
+
+@app.get(
+    "/api/demographics/religions",
+    tags=["Demographics"],
+    summary="Get aggregated religion data for all districts",
+    description="Retrieve total population counts by religion across all districts"
+)
+async def get_all_religions():
+    """
+    Get aggregated religion data for all districts.
+
+    Returns:
+        List[dict]: Religion data with stadtteil_nr, name, latitude, longitude, and religion counts
+    """
+    # Try cache first
+    cache_key = "demographics:religions:all"
+    cached = redis_cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        query = """
+            SELECT s.stadtteil_nr, s.name, s.latitude, s.longitude,
+                   pr.religion, pr.count
+            FROM stadtteile s
+            LEFT JOIN population_by_religion pr ON s.stadtteil_nr = pr.stadtteil_nr
+            WHERE pr.datum = (SELECT MAX(datum) FROM population_by_religion WHERE stadtteil_nr = s.stadtteil_nr)
+            ORDER BY s.stadtteil_nr, pr.count DESC
+        """
+        results = mysql_db.execute_query(query)
+
+        # Cache for 5 minutes
+        redis_cache.set(cache_key, results, ttl=300)
+
+        return results
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+
+
+@app.get(
+    "/api/demographics/nationalities",
+    tags=["Demographics"],
+    summary="Get aggregated nationality data for all districts",
+    description="Retrieve total foreign population counts by nationality across all districts"
+)
+async def get_all_nationalities():
+    """
+    Get aggregated nationality data for all districts.
+
+    Returns:
+        List[dict]: Nationality data with stadtteil_nr, name, latitude, longitude, and nationality counts
+    """
+    # Try cache first
+    cache_key = "demographics:nationalities:all"
+    cached = redis_cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        query = """
+            SELECT s.stadtteil_nr, s.name, s.latitude, s.longitude,
+                   fn.nationality, fn.count
+            FROM stadtteile s
+            LEFT JOIN foreigners_by_nationality fn ON s.stadtteil_nr = fn.stadtteil_nr
+            WHERE fn.datum = (SELECT MAX(datum) FROM foreigners_by_nationality WHERE stadtteil_nr = s.stadtteil_nr)
+            ORDER BY s.stadtteil_nr, fn.count DESC
+        """
+        results = mysql_db.execute_query(query)
+
+        # Cache for 5 minutes
+        redis_cache.set(cache_key, results, ttl=300)
+
+        return results
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+
+
+@app.get(
+    "/api/population/query",
+    tags=["Demographics"],
+    summary="Query population data dynamically",
+    description="Query different population metrics across districts"
+)
+async def query_population_data(
+    metric: str = Query(..., description="Metric type: gender, age, religion, nationality, household"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of results")
+):
+    """
+    Query population data dynamically based on metric type.
+
+    Args:
+        metric: Type of demographic data (gender, age, religion, nationality, household)
+        limit: Maximum results to return
+
+    Returns:
+        List[dict]: Demographic data for the specified metric
+    """
+    # Try cache first
+    cache_key = f"population:query:{metric}:{limit}"
+    cached = redis_cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        if metric == "gender":
+            query = """
+                SELECT s.stadtteil_nr, s.name, pg.total, pg.male, pg.female
+                FROM stadtteile s
+                LEFT JOIN population_by_gender pg ON s.stadtteil_nr = pg.stadtteil_nr
+                WHERE pg.datum = (SELECT MAX(datum) FROM population_by_gender WHERE stadtteil_nr = s.stadtteil_nr)
+                ORDER BY pg.total DESC
+                LIMIT %s
+            """
+        elif metric == "age":
+            query = """
+                SELECT s.stadtteil_nr, s.name, pa.age_group, pa.count
+                FROM stadtteile s
+                LEFT JOIN population_by_age pa ON s.stadtteil_nr = pa.stadtteil_nr
+                WHERE pa.datum = (SELECT MAX(datum) FROM population_by_age WHERE stadtteil_nr = s.stadtteil_nr)
+                ORDER BY s.stadtteil_nr, pa.age_group
+                LIMIT %s
+            """
+        elif metric == "religion":
+            query = """
+                SELECT s.stadtteil_nr, s.name, pr.religion, pr.count
+                FROM stadtteile s
+                LEFT JOIN population_by_religion pr ON s.stadtteil_nr = pr.stadtteil_nr
+                WHERE pr.datum = (SELECT MAX(datum) FROM population_by_religion WHERE stadtteil_nr = s.stadtteil_nr)
+                ORDER BY s.stadtteil_nr, pr.count DESC
+                LIMIT %s
+            """
+        elif metric == "nationality":
+            query = """
+                SELECT s.stadtteil_nr, s.name, fn.nationality, fn.count
+                FROM stadtteile s
+                LEFT JOIN foreigners_by_nationality fn ON s.stadtteil_nr = fn.stadtteil_nr
+                WHERE fn.datum = (SELECT MAX(datum) FROM foreigners_by_nationality WHERE stadtteil_nr = s.stadtteil_nr)
+                ORDER BY s.stadtteil_nr, fn.count DESC
+                LIMIT %s
+            """
+        elif metric == "household":
+            query = """
+                SELECT s.stadtteil_nr, s.name, h.household_type, h.count
+                FROM stadtteile s
+                LEFT JOIN households h ON s.stadtteil_nr = h.stadtteil_nr
+                WHERE h.datum = (SELECT MAX(datum) FROM households WHERE stadtteil_nr = s.stadtteil_nr)
+                ORDER BY s.stadtteil_nr, h.count DESC
+                LIMIT %s
+            """
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid metric type: {metric}. Valid options: gender, age, religion, nationality, household"
+            )
+
+        results = mysql_db.execute_query(query, (limit,))
+
+        # Cache for 5 minutes
+        redis_cache.set(cache_key, results, ttl=300)
+
+        return results
     except HTTPException:
         raise
     except Exception as e:

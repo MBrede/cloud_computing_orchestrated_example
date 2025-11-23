@@ -97,6 +97,18 @@ class Stats(BaseModel):
     cache_hit_rate: Optional[float] = Field(None, description="Redis cache hit rate")
 
 
+class PopulationByReligion(BaseModel):
+    """Model for population by religion data."""
+    religion: str = Field(..., description="Religious affiliation")
+    count: int = Field(..., description="Population count for this religion")
+
+
+class PopulationByNationality(BaseModel):
+    """Model for population by nationality data."""
+    nationality: str = Field(..., description="Nationality")
+    count: int = Field(..., description="Population count for this nationality")
+
+
 class ErrorResponse(BaseModel):
     """Model for error responses."""
     detail: str = Field(..., description="Error message")

@@ -116,32 +116,93 @@ def fetch_stats():
         st.error(f"Error fetching stats: {e}")
         return {}
 
+
+@st.cache_data(ttl=300)
+def fetch_population_query(metric):
+    """
+    Fetch population data based on metric type.
+
+    Args:
+        metric: Type of demographic data to query
+
+    Returns:
+        list: Population data for the specified metric
+    """
+    try:
+        response = requests.get(f"{API_BASE_URL}/api/population/query",
+                                params={'metric': metric, 'limit': 500}, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        st.error(f"Error fetching {metric} data: {e}")
+        return []
+
 @st.cache_data()
-def create_heatmap(stadtteile_with_demographics, heatmap_metric):
+def create_heatmap(stadtteile_with_demographics, heatmap_metric, religion_filter=None, nationality_filter=None):
     heatmap_data = []
-    for district in stadtteile_with_demographics:
-        lat = district.get('latitude', 0)
-        lon = district.get('longitude', 0)
 
-        if lat and lon:
-            value = 0
+    # For religion and nationality, we need to fetch aggregated data
+    if heatmap_metric in ['religion', 'nationality']:
+        try:
+            if heatmap_metric == 'religion':
+                response = requests.get(f"{API_BASE_URL}/api/demographics/religions", timeout=5)
+            else:  # nationality
+                response = requests.get(f"{API_BASE_URL}/api/demographics/nationalities", timeout=5)
 
-            if heatmap_metric == 'population':
-                value = float(district.get('total_population', 0))
-            elif heatmap_metric == 'male_ratio':
-                total = float(district.get('total_population', 0))
-                male = float(district.get('male', 0))
+            response.raise_for_status()
+            data = response.json()
+
+            # Aggregate by district
+            district_totals = {}
+            for row in data:
+                stadtteil_nr = row.get('stadtteil_nr')
+                lat = row.get('latitude')
+                lon = row.get('longitude')
+                count = row.get('count', 0)
+
+                # Apply filter if specified
+                if heatmap_metric == 'religion' and religion_filter:
+                    if row.get('religion') != religion_filter:
+                        continue
+                elif heatmap_metric == 'nationality' and nationality_filter:
+                    if row.get('nationality') != nationality_filter:
+                        continue
+
+                if lat and lon:
+                    key = (stadtteil_nr, float(lat), float(lon))
+                    district_totals[key] = district_totals.get(key, 0) + count
+
+            # Convert to heatmap data
+            for (stadtteil_nr, lat, lon), total in district_totals.items():
                 if total > 0:
-                    value = (male / total) * 100
-            elif heatmap_metric == 'female_ratio':
-                total = float(district.get('total_population', 0))
-                female = float(district.get('female', 0))
-                if total > 0:
-                    value = (female / total) * 100
+                    heatmap_data.append([lat, lon, float(total)])
+        except Exception as e:
+            st.error(f"Error creating {heatmap_metric} heatmap: {e}")
+    else:
+        # Original logic for population-based metrics
+        for district in stadtteile_with_demographics:
+            lat = district.get('latitude', 0)
+            lon = district.get('longitude', 0)
 
-            if value > 0:
-                heatmap_data.append([float(lat), float(lon), value])
-                
+            if lat and lon:
+                value = 0
+
+                if heatmap_metric == 'population':
+                    value = float(district.get('total_population', 0))
+                elif heatmap_metric == 'male_ratio':
+                    total = float(district.get('total_population', 0))
+                    male = float(district.get('male', 0))
+                    if total > 0:
+                        value = (male / total) * 100
+                elif heatmap_metric == 'female_ratio':
+                    total = float(district.get('total_population', 0))
+                    female = float(district.get('female', 0))
+                    if total > 0:
+                        value = (female / total) * 100
+
+                if value > 0:
+                    heatmap_data.append([float(lat), float(lon), value])
+
     if heatmap_data:
         return plugins.HeatMap(
             heatmap_data,
@@ -339,11 +400,13 @@ def main():
     if heatmap_enabled:
         heatmap_metric = st.sidebar.selectbox(
             "Heatmap Metric",
-            ["population", "male_ratio", "female_ratio"],
+            ["population", "male_ratio", "female_ratio", "religion", "nationality"],
             format_func=lambda x: {
                 "population": "Total Population",
                 "male_ratio": "Male Ratio (%)",
-                "female_ratio": "Female Ratio (%)"
+                "female_ratio": "Female Ratio (%)",
+                "religion": "Religion Distribution",
+                "nationality": "Nationality Distribution"
             }[x]
         )
     else:
@@ -429,33 +492,79 @@ def main():
                 bike_df = bike_df.fillna({'Capacity': 'N/A'})
                 st.dataframe(bike_df, hide_index=True, height=200)
 
-        # Population distribution
-        if show_stadtteile and stadtteile_with_demographics:
-            st.subheader("Population by District")
-            try:
-                demo_df = pd.DataFrame(stadtteile_with_demographics)
-                # Ensure total_population is numeric
-                demo_df['total_population'] = pd.to_numeric(demo_df['total_population'], errors='coerce')
-                pop_chart = demo_df.set_index('name')['total_population'].sort_values(ascending=False).head(10)
-                st.bar_chart(pop_chart)
-            except Exception as e:
-                st.error(f"Error creating population chart: {e}")
+        # Dynamic Population Data Query
+        if show_stadtteile:
+            with st.expander("Population Data Explorer", expanded=False):
+                # Metric selection
+                selected_metric = st.selectbox(
+                    "Select Demographic Data",
+                    ["gender", "age", "religion", "nationality", "household"],
+                    format_func=lambda x: {
+                        "gender": "Gender Distribution",
+                        "age": "Age Distribution",
+                        "religion": "Religion Distribution",
+                        "nationality": "Nationality Distribution",
+                        "household": "Household Types"
+                    }[x]
+                )
 
-        # Gender distribution
-        if show_stadtteile and stadtteile_with_demographics:
-            st.subheader("Gender Distribution")
-            try:
-                demo_df = pd.DataFrame(stadtteile_with_demographics)
-                # Ensure numeric types
-                demo_df['male'] = pd.to_numeric(demo_df['male'], errors='coerce')
-                demo_df['female'] = pd.to_numeric(demo_df['female'], errors='coerce')
-                gender_data = pd.DataFrame({
-                    'Male': [demo_df['male'].sum()],
-                    'Female': [demo_df['female'].sum()]
-                })
-                st.bar_chart(gender_data.T)
-            except Exception as e:
-                st.error(f"Error creating gender chart: {e}")
+                # Visualization type
+                viz_type = st.radio(
+                    "Visualization Type",
+                    ["table", "barchart"],
+                    horizontal=True
+                )
+
+                # Fetch data
+                with st.spinner(f"Loading {selected_metric} data..."):
+                    pop_data = fetch_population_query(selected_metric)
+
+                if pop_data:
+                    df = pd.DataFrame(pop_data)
+
+                    if viz_type == "table":
+                        # Display as table
+                        if selected_metric == "gender":
+                            display_df = df[['name', 'total', 'male', 'female']]
+                            display_df.columns = ['District', 'Total', 'Male', 'Female']
+                        elif selected_metric == "age":
+                            # Pivot to show age groups
+                            display_df = df[['name', 'age_group', 'count']]
+                            display_df.columns = ['District', 'Age Group', 'Count']
+                        elif selected_metric == "religion":
+                            display_df = df[['name', 'religion', 'count']]
+                            display_df.columns = ['District', 'Religion', 'Count']
+                        elif selected_metric == "nationality":
+                            display_df = df[['name', 'nationality', 'count']]
+                            display_df.columns = ['District', 'Nationality', 'Count']
+                        elif selected_metric == "household":
+                            display_df = df[['name', 'household_type', 'count']]
+                            display_df.columns = ['District', 'Household Type', 'Count']
+
+                        st.dataframe(display_df, hide_index=True, height=300)
+
+                    else:  # barchart
+                        if selected_metric == "gender":
+                            # Show total gender distribution
+                            chart_df = pd.DataFrame({
+                                'Male': [df['male'].sum()],
+                                'Female': [df['female'].sum()]
+                            })
+                            st.bar_chart(chart_df.T)
+                        elif selected_metric in ["age", "religion", "nationality", "household"]:
+                            # Aggregate by category
+                            if selected_metric == "age":
+                                agg_df = df.groupby('age_group')['count'].sum().sort_values(ascending=False).head(15)
+                            elif selected_metric == "religion":
+                                agg_df = df.groupby('religion')['count'].sum().sort_values(ascending=False).head(10)
+                            elif selected_metric == "nationality":
+                                agg_df = df.groupby('nationality')['count'].sum().sort_values(ascending=False).head(15)
+                            elif selected_metric == "household":
+                                agg_df = df.groupby('household_type')['count'].sum().sort_values(ascending=False).head(10)
+
+                            st.bar_chart(agg_df)
+                else:
+                    st.info(f"No {selected_metric} data available")
 
     # Footer
     st.divider()
