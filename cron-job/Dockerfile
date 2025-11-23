@@ -33,4 +33,4 @@ RUN touch /var/log/cron.log
 RUN crontab /etc/cron.d/bike-sync
 
 # Run initial sync and then start cron
-CMD python /app/fetch_bikes.py && cron && tail -f /var/log/cron.log
+CMD $VIRTUAL_ENV/bin/python /app/fetch_bikes.py && cron && tail -f /var/log/cron.log

@@ -116,7 +116,40 @@ def fetch_stats():
         st.error(f"Error fetching stats: {e}")
         return {}
 
+@st.cache_data()
+def create_heatmap(stadtteile_with_demographics, heatmap_metric):
+    heatmap_data = []
+    for district in stadtteile_with_demographics:
+        lat = district.get('latitude', 0)
+        lon = district.get('longitude', 0)
 
+        if lat and lon:
+            value = 0
+
+            if heatmap_metric == 'population':
+                value = float(district.get('total_population', 0))
+            elif heatmap_metric == 'male_ratio':
+                total = float(district.get('total_population', 0))
+                male = float(district.get('male', 0))
+                if total > 0:
+                    value = (male / total) * 100
+            elif heatmap_metric == 'female_ratio':
+                total = float(district.get('total_population', 0))
+                female = float(district.get('female', 0))
+                if total > 0:
+                    value = (female / total) * 100
+
+            if value > 0:
+                heatmap_data.append([float(lat), float(lon), value])
+                
+    if heatmap_data:
+        return plugins.HeatMap(
+            heatmap_data,
+            name = "Demographic Heatmap",
+            radius = 50,
+            blur = 15
+        )
+        
 def fetch_health():
     """
     Fetch system health status.
@@ -165,57 +198,10 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
 
     # Add demographic heatmap if requested
     if heatmap_metric and stadtteile_with_demographics:
-        # Prepare data for heatmap
-        heatmap_data = []
-        metric_values = []
+        create_heatmap(stadtteile_with_demographics, 
+                       heatmap_metric).add_to(m)
 
-        for district in stadtteile_with_demographics:
-            try:
-                lat = float(district.get('latitude', 0))
-                lon = float(district.get('longitude', 0))
-
-                if lat and lon:
-                    value = 0
-
-                    if heatmap_metric == 'population':
-                        value = float(district.get('total_population', 0))
-                    elif heatmap_metric == 'male_ratio':
-                        total = float(district.get('total_population', 0))
-                        male = float(district.get('male', 0))
-                        if total > 0:
-                            value = (male / total) * 100
-                    elif heatmap_metric == 'female_ratio':
-                        total = float(district.get('total_population', 0))
-                        female = float(district.get('female', 0))
-                        if total > 0:
-                            value = (female / total) * 100
-
-                    if value > 0:
-                        heatmap_data.append([lat, lon, value])
-                        metric_values.append(value)
-            except (ValueError, TypeError):
-                continue  # Skip districts with invalid data
-
-        if heatmap_data:
-            # Create heatmap feature group (makes it controllable via LayerControl)
-            heatmap_group = folium.FeatureGroup(name='Demographic Heatmap', show=True)
-
-            # Create heatmap layer
-            plugins.HeatMap(
-                heatmap_data,
-                min_opacity=0.4,
-                max_opacity=0.8,
-                radius=25,
-                blur=20,
-                gradient={
-                    0.0: 'blue',
-                    0.5: 'yellow',
-                    0.75: 'orange',
-                    1.0: 'red'
-                }
-            ).add_to(heatmap_group)
-
-            heatmap_group.add_to(m)
+        
 
     # Add Stadtteile markers
     if show_stadtteile and stadtteile_with_demographics:
