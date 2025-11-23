@@ -170,23 +170,31 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
         metric_values = []
 
         for district in stadtteile_with_demographics:
-            if district.get('latitude') and district.get('longitude'):
-                value = 0
+            try:
+                lat = float(district.get('latitude', 0))
+                lon = float(district.get('longitude', 0))
 
-                if heatmap_metric == 'population':
-                    value = district.get('total_population', 0)
-                elif heatmap_metric == 'male_ratio':
-                    total = district.get('total_population', 0)
-                    if total > 0:
-                        value = (district.get('male', 0) / total) * 100
-                elif heatmap_metric == 'female_ratio':
-                    total = district.get('total_population', 0)
-                    if total > 0:
-                        value = (district.get('female', 0) / total) * 100
+                if lat and lon:
+                    value = 0
 
-                if value > 0:
-                    heatmap_data.append([district['latitude'], district['longitude'], value])
-                    metric_values.append(value)
+                    if heatmap_metric == 'population':
+                        value = float(district.get('total_population', 0))
+                    elif heatmap_metric == 'male_ratio':
+                        total = float(district.get('total_population', 0))
+                        male = float(district.get('male', 0))
+                        if total > 0:
+                            value = (male / total) * 100
+                    elif heatmap_metric == 'female_ratio':
+                        total = float(district.get('total_population', 0))
+                        female = float(district.get('female', 0))
+                        if total > 0:
+                            value = (female / total) * 100
+
+                    if value > 0:
+                        heatmap_data.append([lat, lon, value])
+                        metric_values.append(value)
+            except (ValueError, TypeError):
+                continue  # Skip districts with invalid data
 
         if heatmap_data:
             # Create heatmap feature group (makes it controllable via LayerControl)
@@ -214,37 +222,47 @@ def create_map(stadtteile_with_demographics, bike_stations, show_stadtteile=True
         stadtteil_group = folium.FeatureGroup(name='Stadtteile (Districts)', show=True)
 
         for district in stadtteile_with_demographics:
-            if district.get('latitude') and district.get('longitude'):
-                # Create popup content
-                popup_html = f"""
-                <div style="font-family: Arial; min-width: 200px;">
-                    <h4 style="margin: 0 0 10px 0;">{district['name']}</h4>
-                    <table style="width: 100%;">
-                        <tr><td><b>District #:</b></td><td>{district['stadtteil_nr']}</td></tr>
-                        <tr><td><b>Population:</b></td><td>{district.get('total_population', 'N/A'):,}</td></tr>
-                        <tr><td><b>Male:</b></td><td>{district.get('male', 'N/A'):,}</td></tr>
-                        <tr><td><b>Female:</b></td><td>{district.get('female', 'N/A'):,}</td></tr>
-                    </table>
-                </div>
-                """
+            try:
+                lat = float(district.get('latitude', 0))
+                lon = float(district.get('longitude', 0))
 
-                # Color based on population size
-                pop = district.get('total_population', 0)
-                if pop > 15000:
-                    color = 'red'
-                elif pop > 10000:
-                    color = 'orange'
-                elif pop > 5000:
-                    color = 'blue'
-                else:
-                    color = 'gray'
+                if lat and lon:
+                    # Convert numeric fields
+                    pop = int(float(district.get('total_population', 0)))
+                    male = int(float(district.get('male', 0)))
+                    female = int(float(district.get('female', 0)))
 
-                folium.Marker(
-                    location=[district['latitude'], district['longitude']],
-                    popup=folium.Popup(popup_html, max_width=300),
-                    tooltip=f"{district['name']} ({district.get('total_population', 0):,})",
-                    icon=folium.Icon(color=color, icon='home', prefix='fa')
-                ).add_to(stadtteil_group)
+                    # Create popup content
+                    popup_html = f"""
+                    <div style="font-family: Arial; min-width: 200px;">
+                        <h4 style="margin: 0 0 10px 0;">{district['name']}</h4>
+                        <table style="width: 100%;">
+                            <tr><td><b>District #:</b></td><td>{district['stadtteil_nr']}</td></tr>
+                            <tr><td><b>Population:</b></td><td>{pop:,}</td></tr>
+                            <tr><td><b>Male:</b></td><td>{male:,}</td></tr>
+                            <tr><td><b>Female:</b></td><td>{female:,}</td></tr>
+                        </table>
+                    </div>
+                    """
+
+                    # Color based on population size
+                    if pop > 15000:
+                        color = 'red'
+                    elif pop > 10000:
+                        color = 'orange'
+                    elif pop > 5000:
+                        color = 'blue'
+                    else:
+                        color = 'gray'
+
+                    folium.Marker(
+                        location=[lat, lon],
+                        popup=folium.Popup(popup_html, max_width=300),
+                        tooltip=f"{district['name']} ({pop:,})",
+                        icon=folium.Icon(color=color, icon='home', prefix='fa')
+                    ).add_to(stadtteil_group)
+            except (ValueError, TypeError, KeyError):
+                continue  # Skip districts with invalid data
 
         stadtteil_group.add_to(m)
 
@@ -428,19 +446,30 @@ def main():
         # Population distribution
         if show_stadtteile and stadtteile_with_demographics:
             st.subheader("Population by District")
-            demo_df = pd.DataFrame(stadtteile_with_demographics)
-            pop_chart = demo_df.set_index('name')['total_population'].sort_values(ascending=False).head(10)
-            st.bar_chart(pop_chart)
+            try:
+                demo_df = pd.DataFrame(stadtteile_with_demographics)
+                # Ensure total_population is numeric
+                demo_df['total_population'] = pd.to_numeric(demo_df['total_population'], errors='coerce')
+                pop_chart = demo_df.set_index('name')['total_population'].sort_values(ascending=False).head(10)
+                st.bar_chart(pop_chart)
+            except Exception as e:
+                st.error(f"Error creating population chart: {e}")
 
         # Gender distribution
         if show_stadtteile and stadtteile_with_demographics:
             st.subheader("Gender Distribution")
-            demo_df = pd.DataFrame(stadtteile_with_demographics)
-            gender_data = pd.DataFrame({
-                'Male': [demo_df['male'].sum()],
-                'Female': [demo_df['female'].sum()]
-            })
-            st.bar_chart(gender_data.T)
+            try:
+                demo_df = pd.DataFrame(stadtteile_with_demographics)
+                # Ensure numeric types
+                demo_df['male'] = pd.to_numeric(demo_df['male'], errors='coerce')
+                demo_df['female'] = pd.to_numeric(demo_df['female'], errors='coerce')
+                gender_data = pd.DataFrame({
+                    'Male': [demo_df['male'].sum()],
+                    'Female': [demo_df['female'].sum()]
+                })
+                st.bar_chart(gender_data.T)
+            except Exception as e:
+                st.error(f"Error creating gender chart: {e}")
 
     # Footer
     st.divider()
